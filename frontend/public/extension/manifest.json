@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "MailOS - Email Intelligence",
+  "version": "1.0.0",
+  "description": "Your personal AI email assistant. Get clarity on what matters. MailOS analyzes your inbox to provide intelligent insights, automatic organization, and daily digests.",
+  "permissions": [
+    "storage",
+    "tabs"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "MailOS - Email Intelligence"
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "host_permissions": [
+    "https://mail.google.com/*"
+  ]
+}

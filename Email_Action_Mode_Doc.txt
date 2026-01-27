@@ -1,0 +1,272 @@
+🧠 PRODUCT CONCEPT: “ACTION MODE”
+
+Add a global user setting:
+
+Inbox Action Mode
+
+Two options:
+
+🅐 Mode 1 — Auto-Apply (Direct Sync Mode)
+
+“Let MailOS automatically organize my Gmail.”
+
+Behavior:
+• AI classifies emails
+• Groups them
+• Applies Gmail labels automatically
+• Moves nothing to trash
+• Only labels (non-destructive)
+
+Use case:
+• Power users
+• High trust
+• Want zero friction
+
+🅑 Mode 2 — Review First (Approval Mode)
+
+“Show me what you want to organize before applying.”
+
+Behavior:
+• AI classifies
+• Groups them
+• Shows preview
+• User confirms
+• THEN labels are applied in Gmail
+
+Use case:
+• First-time users
+• Trust-building
+• Conservative users
+
+🎯 WHY THIS IS IMPORTANT
+
+From user perspective:
+• Fear: “AI will mess up my inbox”
+• Need: control & transparency
+
+From product perspective:
+• Increases adoption
+• Reduces churn
+• Reduces blame on AI
+• Allows gradual trust
+
+From legal perspective:
+• Safer to say “we only act with approval”
+
+🧩 TECHNICAL FLOW (BOTH MODES)
+Common AI Pipeline (same for both)
+Gmail Sync
+   ↓
+AI Classification (category, intent, score)
+   ↓
+Auto-Grouping Decision
+   ↓
+Proposed Gmail Label
+
+
+At this point, you have:
+
+{
+  "email_id": "123",
+  "suggested_label": "Job/Interview",
+  "confidence": 0.92,
+  "reason": "Interview invitation detected"
+}
+
+
+Now behavior splits by mode.
+
+🅐 MODE 1 — AUTO-APPLY (Direct Sync Mode)
+Technical Flow
+AI suggests label
+   ↓
+System checks confidence threshold (e.g. > 0.8)
+   ↓
+Apply Gmail label via Gmail API
+   ↓
+Mark as “auto_applied = true”
+
+API Call
+
+Use:
+
+POST https://gmail.googleapis.com/gmail/v1/users/me/messages/{id}/modify
+{
+  "addLabelIds": ["Label_Job"]
+}
+
+Safety rules:
+
+• Never delete
+• Never archive (initially)
+• Never mark as read
+• Only add labels
+
+DB:
+
+emails.auto_applied BOOLEAN
+emails.gmail_label_id TEXT
+
+🅑 MODE 2 — REVIEW FIRST (Approval Mode)
+Technical Flow
+AI suggests label
+   ↓
+Store as “pending_action”
+   ↓
+Show in UI: “AI Suggestions”
+   ↓
+User clicks Approve / Reject
+   ↓
+If approved → apply Gmail label
+
+
+DB:
+
+email_actions (
+  id,
+  email_id,
+  suggested_label,
+  status ENUM('pending','approved','rejected'),
+  confidence,
+  reason
+)
+
+
+UI shows:
+
+🔹 Suggested: Job / Interview
+Reason: Interview invitation detected
+[Approve] [Reject]
+
+🖥 UI/UX ADDITIONS
+Settings Page
+
+Add:
+
+Inbox Action Mode
+( ) Auto-apply labels
+( ) Review before applying
+
+Confidence threshold
+Slider:
+70% — 95%
+
+New Page: “AI Suggestions”
+
+List of:
+
+• Email subject
+• Suggested label
+• Confidence
+• Reason
+• Approve / Reject
+
+This is critical for:
+• building trust
+• debugging AI
+• collecting training data
+
+🧠 LEARNING FROM USER DECISIONS
+
+When user rejects:
+
+{
+  "email_id": "123",
+  "suggested_label": "Finance",
+  "actual_label": "Promotions"
+}
+
+
+You store:
+
+user_label_preferences
+
+
+This trains:
+• intent → label mapping
+• per-user behavior
+
+This is very valuable training data.
+
+🔐 SECURITY & PERMISSION IMPLICATION
+
+You will need two OAuth scopes depending on mode:
+
+Read-only mode:
+gmail.readonly
+
+Label write mode:
+gmail.modify
+
+
+Important:
+You should request gmail.modify ONLY when:
+User enables Auto-Apply mode.
+
+This is huge for trust.
+
+🧭 PRODUCT ROADMAP IMPACT
+
+This adds a new feature track:
+
+Phase 1 (Immediate)
+
+✔ Review First Mode
+✔ Suggested grouping
+✔ Manual approval
+
+Phase 2
+
+✔ Auto-Apply Mode
+✔ Confidence threshold
+✔ Per-user learning
+
+🧠 WHY THIS SERVES YOUR CORE PURPOSE
+
+Your product’s promise:
+
+“AI organizes your inbox.”
+
+But human fear:
+
+“AI will mess up my inbox.”
+
+This design gives:
+✔ automation
+✔ control
+✔ explainability
+✔ progressive trust
+✔ safer rollout
+
+This is exactly how:
+• Google Photos (face grouping)
+• Gmail Smart Reply
+• Spam filter
+• Apple Mail rules
+
+were adopted.
+
+📌 IMPORTANT DESIGN PRINCIPLES
+
+Labels only (no destructive actions)
+
+Confidence-based automation
+
+Always explain
+
+User can undo
+
+User controls mode
+
+🎯 RECOMMENDED DEFAULT
+
+For new users:
+
+Default = Review First Mode
+
+After X approvals:
+Prompt:
+
+“You’ve approved 95% of suggestions. Enable Auto-Apply?”
+
+This is a powerful trust-building loop.

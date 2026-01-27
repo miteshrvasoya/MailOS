@@ -1,0 +1,345 @@
+How an incoming email is automatically understood (intent + AI score) and placed into the correct group when Auto-Grouping is enabled.
+
+Below is a production-grade technical flow for:
+• intent detection
+• importance scoring
+• auto-grouping
+• interaction with existing rules
+• digest preparation
+• feedback learning
+
+This is written as an implementation flow, not just concept.
+
+🎯 GOAL OF THIS FLOW
+
+For every new email:
+
+Understand what it is about (intent + category)
+
+Decide how important it is (AI score)
+
+Decide which group it belongs to
+
+Decide whether it goes into digest
+
+Learn from user feedback
+
+All automatically.
+
+🧠 HIGH-LEVEL PIPELINE
+New Email
+   ↓
+Preprocess
+   ↓
+AI Classification (intent + score)
+   ↓
+Auto-Grouping Decision
+   ↓
+Rule Override (if exists)
+   ↓
+Persist AI Metadata
+   ↓
+Digest Eligibility Check
+   ↓
+Feedback Loop
+
+1️⃣ EMAIL INGESTION (INPUT CONTRACT)
+
+When Gmail syncs a message, normalize it into this structure:
+
+{
+  "email_id": "uuid",
+  "user_id": "uuid",
+  "from": "hr@amazon.com",
+  "subject": "Interview schedule",
+  "body": "We would like to schedule an interview...",
+  "received_at": "2026-01-24T10:22:00Z"
+}
+
+
+This object is passed to the AI pipeline.
+
+2️⃣ PREPROCESSING (VERY IMPORTANT)
+
+Purpose: reduce noise and prevent prompt injection.
+
+Steps:
+
+Strip HTML
+
+Remove signatures (--, “Sent from iPhone”)
+
+Remove long footers (legal disclaimers)
+
+Truncate to N tokens (e.g., 1,500 chars)
+
+Mask sensitive numbers (OTP, card, account)
+
+Output:
+
+{
+  "clean_text": "...",
+  "subject": "...",
+  "sender": "hr@amazon.com"
+}
+
+3️⃣ AI CLASSIFICATION (INTENT + SCORES)
+Call LLM with structured prompt
+
+Prompt input:
+
+Sender: hr@amazon.com
+Subject: Interview schedule
+Body: We would like to schedule an interview...
+
+
+Expected JSON output:
+
+{
+  "category": "job",
+  "intent": "interview_invitation",
+  "importance_score": 92,
+  "needs_reply": true,
+  "urgency": "high",
+  "explanation": "The email invites the user to schedule an interview."
+}
+
+Store in DB (email_ai):
+field	meaning
+category	high-level bucket
+intent	fine-grained meaning
+importance_score	0–100
+needs_reply	boolean
+urgency	low/medium/high
+explanation	user-facing
+4️⃣ AUTO-GROUPING DECISION ENGINE
+
+This is the key logic.
+
+You compute:
+
+group_candidate = decide_group(email, ai_result, rules)
+
+4.1 Priority Order (VERY IMPORTANT)
+
+Grouping decision order must be:
+
+1. User manual rules
+2. Thread-based grouping
+3. AI intent grouping
+4. AI category grouping
+5. Fallback group (Inbox / Other)
+
+
+This avoids AI breaking user logic.
+
+4.2 Rule Matching
+
+If user has rule:
+
+{
+  "rule_type": "sender",
+  "rule_value": "@amazon.com",
+  "group_id": "job_group"
+}
+
+
+Then:
+
+if rule.matches(email):
+    assign to group_id
+    STOP
+
+4.3 Thread Grouping
+
+If thread_id already belongs to group:
+
+assign same group
+STOP
+
+4.4 Intent-Based Grouping (NEW)
+
+You define intent → group mapping:
+
+INTENT_GROUP_MAP = {
+  "interview_invitation": "Job Applications",
+  "application_status": "Job Applications",
+  "payment_received": "Finance",
+  "otp_message": "Security",
+  "newsletter_update": "Newsletters"
+}
+
+
+Logic:
+
+if intent in INTENT_GROUP_MAP:
+    assign mapped group
+    STOP
+
+4.5 Category-Based Grouping
+
+Fallback:
+
+group = category_to_group(category)
+
+
+Example:
+
+category	group
+job	Job
+finance	Finance
+newsletter	Newsletters
+promo	Promotions
+security	Security
+5️⃣ EMBEDDING-BASED SIMILARITY (OPTIONAL BUT POWERFUL)
+
+You compute embedding:
+
+vector = embed(clean_text)
+
+
+Then:
+
+find nearest existing email embeddings
+if similarity > threshold:
+    assign same group
+
+
+This lets:
+• similar newsletters cluster
+• same bank alert type cluster
+• same company mails cluster
+
+6️⃣ DIGEST ELIGIBILITY LOGIC
+
+After grouping, decide if it goes into digest:
+
+if importance_score >= user.digest_threshold:
+    include in digest
+else if category in forced_digest_categories:
+    include
+else:
+    exclude
+
+
+You should also:
+• exclude OTP
+• exclude pure promos
+
+7️⃣ FULL TECHNICAL FLOW (PSEUDO)
+def process_email(email):
+    clean = preprocess(email)
+
+    ai = classify_with_llm(clean)
+
+    save_email_ai(ai)
+
+    # grouping
+    if match_user_rule(email):
+        group = rule.group_id
+    elif thread_has_group(email.thread_id):
+        group = existing_group
+    elif ai.intent in INTENT_GROUP_MAP:
+        group = INTENT_GROUP_MAP[ai.intent]
+    elif similar_email_exists(clean.embedding):
+        group = similar.group
+    else:
+        group = category_group(ai.category)
+
+    save_group_assignment(email.id, group)
+
+    # digest
+    if ai.importance_score >= threshold:
+        mark_for_digest(email.id)
+
+8️⃣ FEEDBACK LOOP (CRITICAL)
+
+When user clicks:
+
+• “Not important”
+• “Wrong group”
+
+You store:
+
+{
+  "email_id": "...",
+  "feedback": "wrong_group"
+}
+
+
+Then:
+
+Learning logic:
+
+If user marks “not important”:
+
+reduce weight for similar intent
+
+
+If user moves to another group:
+
+learn new intent → group mapping
+
+
+Persist this:
+
+user_intent_preferences
+
+
+Example:
+
+{
+  "user_id": "...",
+  "intent": "newsletter_update",
+  "preferred_group": "Reading"
+}
+
+
+This makes grouping personalized AI, not global.
+
+9️⃣ WHY THIS FLOW SERVES YOUR PRODUCT PURPOSE
+
+Your product promise:
+
+“We automatically organize your inbox.”
+
+This flow:
+✔ understands meaning (intent)
+✔ respects user rules
+✔ groups semantically
+✔ feeds digest
+✔ learns user behavior
+✔ reduces manual setup
+
+It solves:
+• missed emails
+• clutter
+• cognitive load
+• over-notifications
+
+10️⃣ FAILURE HANDLING
+
+If AI fails:
+
+category = "work"
+importance = 50
+group = "Inbox"
+
+
+Never block pipeline.
+
+11️⃣ WHAT YOU SHOULD IMPLEMENT FIRST (ORDER)
+
+Intent + importance LLM call
+
+Intent → group mapping
+
+Rule override
+
+Category fallback
+
+Digest filter
+
+Feedback learning
+
+Embeddings can come later if needed.

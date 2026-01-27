@@ -1,0 +1,277 @@
+A. WHAT SHOULD USER SEE AFTER LOGIN?
+
+❌ Wrong approach:
+Immediately start syncing Gmail silently.
+
+Why?
+• User doesn’t trust you yet
+• You haven’t explained what will happen
+• They may revoke access
+
+✅ Correct approach:
+After login, show a Welcome + Setup screen, not the dashboard.
+
+First screen after login:
+
+Title:
+“Welcome to MailOS”
+Subtitle:
+Let’s set up your inbox intelligence in 2 minutes.
+
+Primary button:
+[ Start Setup ]
+
+Secondary (small):
+[ Skip for now ]
+
+No emails shown yet.
+
+B. STEP-BY-STEP USER JOURNEY (FIRST SESSION)
+
+This is the exact flow I recommend:
+
+STEP 1 — Permission & Trust
+
+Screen: How MailOS Works
+
+Explain in simple bullets:
+
+• We read your emails (read-only)
+• We never send emails
+• We never delete emails
+• We only add labels (if you allow)
+• You can review before we apply changes
+
+Buttons:
+[ Continue ]
+
+STEP 2 — Choose Action Mode
+
+Screen: How should MailOS organize your inbox?
+
+Two options:
+
+Option A (recommended default):
+☑ Review before applying labels
+“MailOS will suggest groups and labels. You approve.”
+
+Option B:
+☐ Auto-apply labels
+“MailOS will organize automatically.”
+
+Explain:
+“You can change this anytime in Settings.”
+
+Buttons:
+[ Continue ]
+
+STEP 3 — Select What to Organize
+
+Screen: What should we organize first?
+
+Checkboxes:
+
+☑ Important emails
+☑ Newsletters
+☑ Job related emails
+☐ Finance emails (optional)
+☐ Promotions
+
+(You can preselect some)
+
+Buttons:
+[ Continue ]
+
+Purpose:
+• personalization
+• reduce fear
+• limit initial scope
+
+STEP 4 — Sync Preview (NOT full sync)
+
+Screen: Scanning your inbox…
+
+Backend:
+• fetch last N emails (e.g. 50–100)
+• classify them
+• group them
+
+Then show:
+
+Preview results:
+
+Job Applications (3)
+Newsletters (12)
+Security (2)
+Finance (1)
+
+Message:
+“Here’s what we found. Nothing has been changed yet.”
+
+Buttons:
+[ Looks good ]
+[ Adjust settings ]
+
+STEP 5 — Confirmation
+
+Screen: Apply to Gmail?
+
+Text:
+“We will apply labels to these emails.”
+
+Buttons:
+[ Apply labels ]
+[ Skip for now ]
+
+If user chose Review Mode:
+• Mark suggestions as “pending”
+
+If Auto Mode:
+• Apply labels immediately
+
+STEP 6 — Land on Dashboard
+
+Now show:
+
+Dashboard with:
+• Important emails
+• Groups
+• Digest preview
+
+Top banner:
+“Setup complete”
+
+C. ONBOARDING FEATURE SPECIFICATION
+New Concepts
+onboarding_state (per user)
+{
+  "step": "select_mode",
+  "completed": false,
+  "last_seen": "2026-01-24T12:00:00Z"
+}
+
+
+Steps enum:
+• welcome
+• choose_mode
+• select_categories
+• preview
+• confirm
+• completed
+
+onboarding_events
+
+Track:
+
+• step_started
+• step_completed
+• skipped
+• exited
+
+Example:
+
+{
+  "user_id": "uuid",
+  "step": "preview",
+  "action": "exit"
+}
+
+
+This lets you answer:
+• Where users drop
+• Which step is scary
+• Which step is confusing
+
+D. PROGRESS TRACKING & RESUME LOGIC
+
+Rules:
+
+• If onboarding not completed:
+→ always redirect to next step after login
+
+• If user exits:
+→ resume from last step
+
+• If completed:
+→ never show again
+
+Unless:
+• user resets in Settings
+
+E. ROADMAP FOR THIS FEATURE
+Phase 1 — MVP Onboarding
+
+• Welcome screen
+• Choose mode
+• Preview sync
+• Confirm
+• Dashboard redirect
+• Track completion
+
+Phase 2 — Smart Onboarding
+
+• Detect confidence
+• Suggest Auto-Apply later:
+“You approved 90% of suggestions. Switch to auto?”
+
+• Add tooltips inside dashboard
+• Add “Why this email?” explanations
+
+Phase 3 — Adaptive Onboarding
+
+• Different flows for:
+
+job seekers
+
+newsletter-heavy users
+
+finance-heavy users
+
+• A/B test onboarding screens
+
+F. KEY UX PRINCIPLES
+
+Never act before explaining
+
+Always show preview
+
+Use human language
+
+Give user control
+
+Avoid technical terms
+
+Show safety clearly
+
+Let user skip
+
+Resume intelligently
+
+G. WHAT NOT TO DO
+
+❌ Immediately sync and label
+❌ Hide what you are doing
+❌ Ask for too many permissions at once
+❌ Show dashboard without explanation
+❌ Skip preview
+❌ Force auto-mode
+
+SUMMARY
+
+Correct starting point is:
+
+Login
+→ Setup Wizard
+→ Preview
+→ Confirm
+→ Dashboard
+
+NOT:
+Login → Dashboard → Surprise labels
+
+This onboarding will:
+• increase trust
+• reduce churn
+• improve AI training
+• reduce support
+• improve retention

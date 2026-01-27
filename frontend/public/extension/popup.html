@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MailOS</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            width: 320px;
+            background: #1a1a1a;
+            color: #fafafa;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            padding: 0;
+        }
+
+        .container {
+            padding: 16px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            margin-bottom: 20px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .logo-text {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fafafa;
+        }
+
+        .tagline {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 16px;
+        }
+
+        .menu {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            background: #252525;
+            border: 1px solid #333;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: #fafafa;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .menu-item:hover {
+            background: #2f2f2f;
+            border-color: #444;
+            transform: translateX(2px);
+        }
+
+        .menu-item.primary {
+            background: #fafafa;
+            color: #1a1a1a;
+            border-color: #fafafa;
+            font-weight: 600;
+        }
+
+        .menu-item.primary:hover {
+            background: #f0f0f0;
+            border-color: #f0f0f0;
+        }
+
+        .icon {
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .divider {
+            height: 1px;
+            background: #333;
+            margin: 12px 0;
+        }
+
+        .footer {
+            margin-top: auto;
+            padding-top: 12px;
+            border-top: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .version {
+            font-size: 11px;
+            color: #666;
+            text-align: center;
+        }
+
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            padding: 0 8px;
+        }
+
+        .social-link {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #252525;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            color: #999;
+            font-size: 12px;
+        }
+
+        .social-link:hover {
+            background: #333;
+            color: #fafafa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                <span class="logo-text">MailOS</span>
+            </div>
+            <div class="tagline">AI-powered email intelligence</div>
+        </div>
+
+        <div class="menu">
+            <a href="#" class="menu-item primary" id="openDashboard">
+                <span class="icon">📊</span>
+                <span>Open Dashboard</span>
+            </a>
+            
+            <a href="#" class="menu-item" id="openGroups">
+                <span class="icon">📁</span>
+                <span>View Email Groups</span>
+            </a>
+
+            <a href="#" class="menu-item" id="openInsights">
+                <span class="icon">📈</span>
+                <span>View Insights</span>
+            </a>
+
+            <a href="#" class="menu-item" id="openRules">
+                <span class="icon">⚙️</span>
+                <span>Manage Rules</span>
+            </a>
+
+            <div class="divider"></div>
+
+            <a href="#" class="menu-item" id="openWebsite">
+                <span class="icon">🌐</span>
+                <span>Visit Website</span>
+            </a>
+
+            <a href="#" class="menu-item" id="openHelp">
+                <span class="icon">❓</span>
+                <span>Help & Support</span>
+            </a>
+        </div>
+
+        <div class="footer">
+            <div class="social-links">
+                <a href="#" class="social-link" id="twitter" title="Twitter">𝕏</a>
+                <a href="#" class="social-link" id="github" title="GitHub">⚡</a>
+                <a href="#" class="social-link" id="email" title="Email">✉️</a>
+            </div>
+            <div class="version">v1.0.0</div>
+        </div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>

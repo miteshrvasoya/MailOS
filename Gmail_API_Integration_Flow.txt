@@ -1,0 +1,279 @@
+1️⃣ OAUTH & PERMISSION STRATEGY (CRITICAL)
+
+You must support two permission levels:
+
+Level 1 — Read-only (default)
+
+Used for:
+• onboarding
+• preview
+• AI analysis
+• digest
+
+Scope:
+
+https://www.googleapis.com/auth/gmail.readonly
+
+
+You can:
+✔ read messages
+✔ read threads
+❌ NOT modify anything
+
+Level 2 — Modify (only if user enables labeling)
+
+Used for:
+• applying labels
+• auto-mode
+
+Scope:
+
+https://www.googleapis.com/auth/gmail.modify
+
+
+You request this scope ONLY when:
+User clicks:
+
+“Allow MailOS to apply labels in Gmail”
+
+This is very important for:
+• user trust
+• Google review
+• legal clarity
+
+2️⃣ FIRST-TIME SYNC (PREVIEW MODE)
+
+This happens during onboarding Step 4 (“Scanning your inbox…”).
+
+Backend Flow:
+POST /gmail/preview-sync
+
+
+Worker does:
+
+Call:
+
+GET users.messages.list?q=newer_than:7d
+
+
+(limit to 50–100)
+
+For each message:
+
+GET users.messages.get(format=full)
+
+
+Extract:
+• subject
+• from
+• snippet
+• body (text/plain)
+• threadId
+
+Store as:
+
+emails.preview = true
+
+
+Run AI pipeline:
+• intent
+• importance
+• group suggestion
+
+Return summary:
+
+{
+  "groups": [
+    {"name": "Job", "count": 3},
+    {"name": "Newsletters", "count": 12}
+  ]
+}
+
+
+UI shows preview.
+
+NO Gmail changes yet.
+
+3️⃣ LABEL CREATION FLOW
+
+Before applying labels, ensure labels exist.
+
+Fetch existing labels:
+GET users.labels.list
+
+
+For each group:
+Check if label exists:
+
+MailOS/Job
+MailOS/Finance
+MailOS/Newsletters
+
+
+If not:
+
+POST users.labels.create
+{
+  "name": "MailOS/Job",
+  "labelListVisibility": "labelShow",
+  "messageListVisibility": "show"
+}
+
+
+Store:
+
+gmail_label_id
+
+
+in DB.
+
+4️⃣ REVIEW MODE FLOW (USER CONFIRMS)
+
+For each suggested action:
+
+{
+  "email_id": "abc",
+  "gmail_message_id": "xyz",
+  "suggested_label": "MailOS/Job",
+  "confidence": 0.91
+}
+
+
+UI shows:
+[Approve] [Reject]
+
+If approved:
+
+POST users.messages.modify
+{
+  "addLabelIds": ["Label_Job"]
+}
+
+
+DB:
+
+email_actions.status = approved
+emails.auto_applied = false
+
+
+If rejected:
+• do nothing
+• store feedback
+
+5️⃣ AUTO-APPLY MODE FLOW
+
+If user enables Auto-Apply:
+
+For each new email:
+
+if confidence >= threshold:
+    apply label automatically
+
+
+Call:
+
+POST users.messages.modify
+{
+  "addLabelIds": ["Label_Job"]
+}
+
+
+Never:
+❌ remove labels
+❌ archive
+❌ mark read
+❌ delete
+
+Only:
+✔ add labels
+
+6️⃣ CONTINUOUS SYNC FLOW (AFTER SETUP)
+
+Every X minutes:
+
+GET users.messages.list?q=after:{last_sync_ts}
+
+
+For each new message:
+
+• fetch
+• preprocess
+• AI classify
+• decide group
+• check mode
+• apply or suggest
+• store
+
+7️⃣ THREAD HANDLING (IMPORTANT)
+
+If thread already labeled:
+
+GET users.threads.get
+
+
+Apply same label to new messages in thread.
+
+This keeps conversations consistent.
+
+8️⃣ SAFETY RULES (NON-NEGOTIABLE)
+
+Your Gmail integration must obey:
+
+Never delete
+
+Never archive
+
+Never mark as read
+
+Never send mail
+
+Never modify user labels
+
+Only create labels under:
+MailOS/*
+
+Only apply labels created by MailOS
+
+Always explain actions
+
+This is required for:
+• user trust
+• Google compliance
+• your brand
+
+9️⃣ DATA MODEL ADDITIONS
+
+You will need:
+
+gmail_labels (
+  id,
+  user_id,
+  name,
+  gmail_label_id
+)
+
+email_actions (
+  id,
+  email_id,
+  suggested_label,
+  status, -- pending/approved/rejected
+  confidence
+)
+
+
+And in users:
+
+users.action_mode ENUM('review','auto')
+users.confidence_threshold INT
+
+🔟 ERROR HANDLING
+
+If Gmail API fails:
+• retry
+• log
+• do NOT block AI
+
+If permission revoked:
+• pause labeling
+• show banner:
+“Reconnect Gmail to continue”
