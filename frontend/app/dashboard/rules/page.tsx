@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { api } from '@/lib/api'
+import api from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Plus, Settings2, Trash2 } from 'lucide-react'
 import Link from 'next/link'

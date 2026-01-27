@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { 
   Sparkles, Shield, Eye, Tag, Check, ChevronRight, 
-  Sparkles, Shield, Eye, Tag, Check, ChevronRight, 
   Loader2, Mail, Brain, FileText, DollarSign, Megaphone, Briefcase 
 } from 'lucide-react'
 import api from '@/lib/api'
