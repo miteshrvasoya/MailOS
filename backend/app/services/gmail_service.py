@@ -1,11 +1,13 @@
 from typing import List, Dict, Any, Optional
 from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from sqlmodel import Session, select
 from app.models.user import User
 from app.models.google_credential import GoogleCredential
 from app.models.gmail_label import GmailLabel
 from app.core.config import settings
+from datetime import datetime
 import logging
 
 logger = logging.getLogger(__name__)
@@ -28,7 +30,7 @@ class GmailService:
         if not cred_model:
             raise Exception("User not connected to Gmail")
             
-        return Credentials(
+        creds = Credentials(
             token=cred_model.access_token,
             refresh_token=cred_model.refresh_token,
             token_uri=cred_model.token_uri,
@@ -36,6 +38,21 @@ class GmailService:
             client_secret=settings.GOOGLE_CLIENT_SECRET,
             scopes=cred_model.scopes.split(',') if cred_model.scopes else []
         )
+        
+        if creds and creds.expired and creds.refresh_token:
+            try:
+                creds.refresh(Request())
+                # Update DB with new token
+                cred_model.access_token = creds.token
+                cred_model.updated_at = datetime.utcnow()
+                # Scopes might have changed during refresh if requested? Usually not but good to keep sync.
+                self.db.add(cred_model)
+                self.db.commit()
+                logger.info(f"Refreshed Gmail access token for user {self.user.id}")
+            except Exception as e:
+                logger.error(f"Failed to refresh Gmail token for user {self.user.id}: {e}")
+                
+        return creds
 
     def fetch_preview_emails(self, limit: int = 50) -> List[Dict[str, Any]]:
         """

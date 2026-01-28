@@ -9,6 +9,7 @@ import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import api from '@/lib/api'
 import { trackEvent } from '@/lib/analytics'
+import { useToast } from '@/components/ui/use-toast'
 
 interface EmailInsight {
   id: string
@@ -33,24 +34,71 @@ export default function DashboardPage() {
     { label: 'AI confidence', value: '0%', icon: Zap },
   ])
 
+  const { toast } = useToast()
+
+  useEffect(() => {
+    if (session?.user?.id) {
+      fetchDashboardData()
+    }
+  }, [session])
+
+  const fetchDashboardData = async () => {
+    setLoading(true)
+    try {
+      const [statsRes, emailsRes] = await Promise.all([
+        api.get('/dashboard/stats'),
+        api.get('/emails?limit=5')
+      ])
+      
+      const s = statsRes.data
+      setStats([
+        { label: 'Emails processed today', value: s.total_emails.toString(), icon: Mail },
+        { label: 'Important detected', value: s.important_emails.toString(), icon: AlertCircle },
+        { label: 'Groups created', value: s.active_rules.toString(), icon: TrendingUp },
+        { label: 'AI confidence', value: `${s.ai_confidence}%`, icon: Zap },
+      ])
+      
+      setEmails(emailsRes.data)
+    } catch (error) {
+      console.error("Failed to fetch dashboard data", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleScan = async () => {
       if (!session?.user?.id) return;
       setScanning(true);
+      toast({
+        title: "Scanning initiated",
+        description: "Checking your Gmail for new important emails...",
+      })
+      
       try {
           trackEvent({ action: 'scan_gmail', category: 'Dashboard', label: 'User initiated scan' })
           await api.post('/gmail/sync', { 
             user_id: session.user.id,
             mode: 'full'
           });
-          // Redirect to suggestions to review results
+          
+          toast({
+            title: "Scan complete",
+            description: "We've found new insights for you.",
+          })
+          
+          // Refresh data instead of just redirecting, or redirect if that's the desired flow
+          fetchDashboardData()
           router.push('/dashboard/suggestions');
       } catch (error) {
           console.error("Scan failed", error);
+          toast({
+            title: "Scan failed",
+            description: "There was an error connecting to Gmail.",
+            variant: "destructive"
+          })
           setScanning(false);
       }
   }
-
-// ... (useEffect)
 
   return (
     <div className="min-h-screen bg-background">
@@ -101,8 +149,8 @@ export default function DashboardPage() {
                       </p>
                     </div>
                     <div className="flex gap-2 flex-shrink-0">
-                      <Button size="sm" className="bg-primary hover:bg-primary/90 text-background font-medium cta-button">
-                        View Details
+                      <Button asChild size="sm" className="bg-primary hover:bg-primary/90 text-background font-medium cta-button">
+                        <Link href={`/dashboard/emails/${email.id}`}>View Details</Link>
                       </Button>
                     </div>
                   </div>

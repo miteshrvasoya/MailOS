@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useToast } from '@/components/ui/use-toast'
 
 interface Rule {
   id: string
@@ -22,12 +23,14 @@ interface Rule {
 export default function RulesPage() {
   const [rules, setRules] = useState<Rule[]>([])
   const [loading, setLoading] = useState(true)
+  const { toast } = useToast()
 
   useEffect(() => {
     fetchRules()
   }, [])
 
   const fetchRules = async () => {
+    setLoading(true)
     try {
       const res = await api.get('/rules')
       setRules(res.data)
@@ -35,6 +38,24 @@ export default function RulesPage() {
       console.error("Failed to fetch rules", e)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleDelete = async (id: string, name: string) => {
+    try {
+      await api.delete(`/rules/${id}`)
+      setRules((prev: Rule[]) => prev.filter((r: Rule) => r.id !== id))
+      toast({
+        title: "Rule deleted",
+        description: `"${name}" has been removed.`,
+      })
+    } catch (error) {
+       console.error("Failed to delete rule", error)
+       toast({
+         title: "Error",
+         description: "Failed to delete the rule.",
+         variant: "destructive"
+       })
     }
   }
 
@@ -88,13 +109,17 @@ export default function RulesPage() {
                   </div>
                   <CardDescription>{rule.description || "No description provided"}</CardDescription>
                 </div>
-                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-red-500">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="text-muted-foreground hover:text-red-500"
+                  onClick={() => handleDelete(rule.id, rule.name)}
+                >
                   <Trash2 className="w-4 h-4" />
                 </Button>
               </CardHeader>
               <CardContent>
                 <div className="text-sm text-muted-foreground">
-                   {/* We could summarize conditions here like "If sender contains @foo..." */}
                    <p>{Object.keys(rule.conditions.all || {}).length} conditions defined.</p>
                 </div>
               </CardContent>

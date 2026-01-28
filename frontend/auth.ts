@@ -11,7 +11,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       authorization: {
         params: {
-          scope: 'openid profile email https://www.googleapis.com/auth/gmail.readonly',
+          scope: 'openid profile email https://www.googleapis.com/auth/gmail.modify',
           prompt: 'consent',
           access_type: 'offline',
           response_type: 'code'
@@ -24,6 +24,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   callbacks: {
     async signIn({ user, account, profile }) {
+      console.log("Account Scopes: ", account?.scope);
+      console.log("Refresh Token Present: ", !!account?.refresh_token);
+      
       // Store user in backend database
       try {
         const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
