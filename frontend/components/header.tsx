@@ -1,3 +1,5 @@
+'use client'
+
 import { MailOpen, LogOut, User, Settings as SettingsIcon } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
