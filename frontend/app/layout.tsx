@@ -36,6 +36,29 @@ export const metadata: Metadata = {
     ],
     apple: '/apple-icon.png',
   },
+  openGraph: {
+    title: 'MailOS - Intelligent Inbox Management',
+    description: 'AI that understands your emails, prioritizes what matters, and sends you daily clarity.',
+    url: 'https://mail-os.vercel.app',
+    siteName: 'MailOS',
+    images: [
+      {
+        url: 'https://pub-2a4eb4e23d7d4d18bc7ca5d587d38902.r2.dev/landing-page.png',
+        width: 1200,
+        height: 630,
+        alt: 'MailOS Preview',
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'MailOS - Intelligent Inbox Management',
+    description: 'AI that understands your emails, prioritizes what matters, and sends you daily clarity.',
+    creator: '@mailos_precizn',
+    images: ['https://pub-2a4eb4e23d7d4d18bc7ca5d587d38902.r2.dev/landing-page.png'],
+  },
 }
 
 export default function RootLayout({
