@@ -4,10 +4,16 @@ from typing import Optional, Dict, Any
 from openai import OpenAI
 from app.core.config import settings
 
-# Initialize client only if key is present to avoid errors at import time
+# Initialize client
+api_key = settings.OPENROUTER_API_KEY
+base_url = settings.OPENROUTER_BASE_URL
+
 client = None
-if settings.OPENAI_API_KEY:
-    client = OpenAI(api_key=settings.OPENAI_API_KEY)
+if api_key:
+    client = OpenAI(
+        base_url=base_url,
+        api_key=api_key,
+    )
 
 def preprocess_email(subject: str, body: str, sender: str) -> Dict[str, str]:
     """
@@ -37,23 +43,30 @@ def preprocess_email(subject: str, body: str, sender: str) -> Dict[str, str]:
     }
 
 def classify_email(subject: str, body: str, sender: str) -> Dict[str, Any]:
+    print("Email Classification---")
     """
-    Classify email intent and importance using LLM.
+    Classify email intent and importance using OpenRouter via OpenAI SDK.
     """
     # Initialize client locally if global init failed or context changed
     local_client = client
-    if not local_client and settings.OPENAI_API_KEY:
-        local_client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    if not local_client:
+        api_key = settings.OPENROUTER_API_KEY
+        base_url = settings.OPENROUTER_BASE_URL
+        
+        if api_key:
+            local_client = OpenAI(
+                base_url=base_url,
+                api_key=api_key,
+            )
         
     if not local_client:
-        # Fallback if no API key
         return {
             "category": "Uncategorized",
             "intent": "unknown",
             "importance_score": 50.0,
             "needs_reply": False,
             "urgency": "low",
-            "explanation": "AI key missing. Defaulting to neutral."
+            "explanation": "OpenRouter API key missing."
         }
 
     clean_data = preprocess_email(subject, body, sender)
@@ -76,8 +89,13 @@ def classify_email(subject: str, body: str, sender: str) -> Dict[str, Any]:
     """
     
     try:
-        response = local_client.chat.completions.create(
-            model="gpt-3.5-turbo",
+        completion = local_client.chat.completions.create(
+            extra_headers={
+                "HTTP-Referer": "https://mailos.ai", 
+                "X-Title": "MailOS Backend",
+            },
+            extra_body={},
+            model=settings.AI_MODEL,
             messages=[
                 {"role": "system", "content": "You are an email assistant. Respond only in valid JSON."},
                 {"role": "user", "content": prompt}
@@ -85,8 +103,10 @@ def classify_email(subject: str, body: str, sender: str) -> Dict[str, Any]:
             temperature=0,
             response_format={"type": "json_object"}
         )
+
+        print("Completion: ", completion)
         
-        content = response.choices[0].message.content
+        content = completion.choices[0].message.content
         return json.loads(content)
         
     except Exception as e:

@@ -81,10 +81,10 @@ class SyncResponse(BaseModel):
     pending_actions_count: int
     auto_applied_count: int
 
-@router.post("/sync", response_model=SyncResponse)
-def sync_emails(req: SyncRequest, db: Session = Depends(deps.get_db)):
+@router.post("/mock-sync", response_model=SyncResponse)
+def simulate_sync(req: SyncRequest, db: Session = Depends(deps.get_db)):
     """
-    Simulate Gmail Sync.
+    Simulation of Gmail Sync for testing and development purposes.
     Generates mock emails and processes them through the pipeline.
     """
     from app.models.user import User

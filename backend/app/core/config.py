@@ -11,6 +11,11 @@ class Settings(BaseSettings):
     
     OPENAI_API_KEY: Optional[str] = None
     
+    # OpenRouter / AI Settings
+    OPENROUTER_API_KEY: Optional[str] = None
+    OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
+    AI_MODEL: str = "meta-llama/llama-3.1-405b-instruct:free"
+    
     # Gmail Integration
     GOOGLE_CLIENT_ID: Optional[str] = None
     GOOGLE_CLIENT_SECRET: Optional[str] = None

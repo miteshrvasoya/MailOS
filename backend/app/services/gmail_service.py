@@ -7,8 +7,9 @@ from app.models.user import User
 from app.models.google_credential import GoogleCredential
 from app.models.gmail_label import GmailLabel
 from app.core.config import settings
-from datetime import datetime
 import logging
+import email.utils
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +73,13 @@ class GmailService:
                     subject = next((h['value'] for h in headers if h['name'] == 'Subject'), '(No Subject)')
                     sender = next((h['value'] for h in headers if h['name'] == 'From'), '(Unknown Sender)')
                     date_str = next((h['value'] for h in headers if h['name'] == 'Date'), None)
-                    
+                    sent_at = None
+                    if date_str:
+                        try:
+                            sent_at = email.utils.parsedate_to_datetime(date_str)
+                        except Exception as e:
+                            logger.warning(f"Failed to parse date string '{date_str}': {e}")
+
                     snippet = full_msg.get('snippet', '')
                     
                     preview_data.append({
@@ -80,7 +87,7 @@ class GmailService:
                         "thread_id": msg['threadId'],
                         "subject": subject,
                         "sender": sender,
-                        "sent_at": date_str, # Will need parsing later
+                        "sent_at": sent_at,
                         "snippet": snippet,
                         "body": snippet # Simplified for preview
                     })

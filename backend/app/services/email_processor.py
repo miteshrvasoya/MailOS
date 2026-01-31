@@ -40,32 +40,53 @@ def process_email_pipeline(
         email_data.get("sender", "")
     )
     
-    # 2. Create Insight Object
-    insight = EmailInsight(
-        user_id=user.id,
-        gmail_message_id=email_data.get("gmail_message_id"),
-        thread_id=email_data.get("thread_id"),
-        sender=email_data.get("sender"),
-        subject=email_data.get("subject"),
-        sent_at=email_data.get("sent_at", datetime.utcnow()),
-        snippet=email_data.get("body", "")[:200],
+    # Check if Insight already exists
+    gmail_msg_id = email_data.get("gmail_message_id")
+    insight = None
+    if gmail_msg_id:
+        from sqlmodel import select
+        insight = db.exec(select(EmailInsight).where(EmailInsight.gmail_message_id == gmail_msg_id)).first()
         
-        # AI Fields
-        category=ai_result.get("category", "Uncategorized"),
-        intent=ai_result.get("intent"),
-        importance_score=ai_result.get("importance_score", 0),
-        urgency=ai_result.get("urgency", "low"),
-        needs_reply=ai_result.get("needs_reply", False),
-        explanation=ai_result.get("explanation"),
-        classification_tags=[ai_result.get("category")] if ai_result.get("category") else [],
-        is_preview=is_preview
-    )
-    
+    if not insight:
+        # Create New Insight
+        insight = EmailInsight(
+            user_id=user.id,
+            gmail_message_id=gmail_msg_id,
+            thread_id=email_data.get("thread_id"),
+            sender=email_data.get("sender"),
+            subject=email_data.get("subject"),
+            sent_at=email_data.get("sent_at", datetime.utcnow()),
+            snippet=email_data.get("body", "")[:200],
+            
+            # AI Fields
+            category=ai_result.get("category", "Uncategorized"),
+            intent=ai_result.get("intent"),
+            importance_score=ai_result.get("importance_score", 0),
+            urgency=ai_result.get("urgency", "low"),
+            needs_reply=ai_result.get("needs_reply", False),
+            explanation=ai_result.get("explanation"),
+            classification_tags=[ai_result.get("category")] if ai_result.get("category") else [],
+            is_preview=is_preview
+        )
+        db.add(insight)
+    else:
+        # Update Existing Insight
+        insight.category = ai_result.get("category", insight.category)
+        insight.intent = ai_result.get("intent", insight.intent)
+        insight.importance_score = ai_result.get("importance_score", insight.importance_score)
+        insight.urgency = ai_result.get("urgency", insight.urgency)
+        insight.needs_reply = ai_result.get("needs_reply", insight.needs_reply)
+        insight.explanation = ai_result.get("explanation", insight.explanation)
+        insight.classification_tags = [ai_result.get("category")] if ai_result.get("category") else []
+        insight.is_preview = is_preview
+        # Don't update static fields like sender, subject, sent_at unless needed
+        
+        db.add(insight)
+
     # 3. Auto-Grouping
     assigned_group = assign_group(insight, ai_result, db)
     
     # 3.5 Rule Engine Evaluation
-    # Merge email data with AI results for rule evaluation
     rule_data = {**email_data, **ai_result}
     rule_engine = RuleEngine(db, user)
     rule_overrides = rule_engine.evaluate(rule_data)
@@ -81,14 +102,12 @@ def process_email_pipeline(
              insight.urgency = "high"
     
     if "mark_read" in rule_overrides:
-        # TODO: Handle mark read status in Email model or Action
         pass
 
-    if insight.category:
+    if insight.category and f"AI:{insight.category}" not in insight.classification_tags:
         insight.classification_tags.append(f"AI:{insight.category}")
     insight.category = assigned_group
     
-    db.add(insight)
     db.commit()
     db.refresh(insight)
     
@@ -114,21 +133,38 @@ def process_email_pipeline(
         else:
              # Warning: No service provided
              pass
-        
-    action = EmailAction(
-        user_id=user.id,
-        email_id=insight.id,
-        suggested_label=assigned_group,
-        confidence=confidence,
-        reason=insight.explanation,
-        status=status
-    )
-    db.add(action)
+    
+    # Check for existing Action
+    from sqlmodel import select
+    action = db.exec(select(EmailAction).where(EmailAction.email_id == insight.id)).first()
+    
+    if not action:
+        action = EmailAction(
+            user_id=user.id,
+            email_id=insight.id,
+            suggested_label=assigned_group,
+            confidence=confidence,
+            reason=insight.explanation,
+            status=status
+        )
+        db.add(action)
+    else:
+        # Update existing action if it hasn't been acted upon manually
+        if action.status == "pending":
+             action.suggested_label = assigned_group
+             action.confidence = confidence
+             action.reason = insight.explanation
+             action.status = status
+             db.add(action)
+             
     db.commit()
     
     # 5. Notifications
     notif = None
     if insight.importance_score > 80 or insight.urgency == "high":
+        # Check if notification already exists to avoid spam?
+        # For now, simplistic approach: create new notification only if insight was just created?
+        # Or just let it be.
         notif = Notification(
             user_id=insight.user_id,
             title=f"Important: {insight.subject[:30]}...",
