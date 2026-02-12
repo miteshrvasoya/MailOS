@@ -13,9 +13,11 @@ class UserIntentPreference(SQLModel, table=True):
     
     # If the user manually moves emails of this intent to a specific group
     preferred_group_id: Optional[int] = None
+    preferred_group_name: Optional[str] = None  # Stores the user's preferred group/category name
     
     # AI learning adjustments
     importance_adjustment: float = Field(default=0.0) # e.g. -10.0 or +20.0
     
     # Relationships
     user: "User" = Relationship(back_populates="intent_preferences")
+

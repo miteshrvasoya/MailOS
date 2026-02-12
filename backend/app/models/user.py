@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from .action import EmailAction
     from .gmail_label import GmailLabel
     from .google_credential import GoogleCredential
+    from .category import Category
 
 
 
@@ -44,5 +45,6 @@ class User(SQLModel, table=True):
     actions: List["EmailAction"] = Relationship(back_populates="user")
     gmail_labels: List["GmailLabel"] = Relationship(back_populates="user")
     google_credential: Optional["GoogleCredential"] = Relationship(back_populates="user")
+    categories: List["Category"] = Relationship(back_populates="user")
 
 

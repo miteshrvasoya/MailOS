@@ -54,13 +54,7 @@ def submit_feedback(
         
     elif feedback.feedback_type == "wrong_group":
          if feedback.target_group:
-             # We rely on Name since we don't have Group Table IDs yet
-             # But model has preferred_group_id (int). 
-             # We will temporarily store hash or 0. 
-             # Real fix: Migration to add preferred_group_name. 
-             # For now, we just log it and don't persist group pref to avoid crash.
-             # Or we can reuse 'preferred_group_id' to store a clear mapping if we had one.
-             pass
+             pref.preferred_group_name = feedback.target_group
          
     db.add(pref)
     db.commit()

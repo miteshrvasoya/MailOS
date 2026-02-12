@@ -32,6 +32,11 @@ class EmailInsight(SQLModel, table=True):
     is_read: bool = Field(default=False)
     is_preview: bool = Field(default=False)
     
+    # Follow-up tracking
+    follow_up_status: str = Field(default="none")  # none, pending, resolved
+    follow_up_deadline: Optional[datetime] = None  # when the follow-up is due
+    waiting_on_reply: bool = Field(default=False)  # True if user is waiting for someone else to reply
+    
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     # Relationships

@@ -1,0 +1,129 @@
+PRODUCT ROADMAP (12–18 Months)
+
+Below is a time-phased roadmap for MailOS, optimized to:
+
+🟠 validate product assumptions early
+🟡 unlock second major use cases
+🟢 build moat & defensibility
+🔵 expand market reach
+🟣 prepare for monetization
+
+🗓 Phase 1: Core Intelligence (0–3 months)
+
+Status: Already in progress
+✔ Gmail connection
+✔ Email scanning
+✔ Rules system
+✔ Digest creation
+
+Remaining Deliverables
+✔ Preview vs Auto mode onboarding
+✔ Intent + importance classification
+✔ Auto-grouping
+✔ Confidence thresholds
+✔ Review UI and actions
+✔ Feedback loop learning
+
+Goal:
+Deliver a working “inbox understanding” MVP that helps users answer:
+
+“What matters today?”
+
+🗓 Phase 2: Actionability & Integrations (3–6 months)
+
+Primary Stories
+✔ Follow-up detection
+✔ Snooze & reminders
+✔ Task extraction
+✔ Calendar integration
+✔ Rule learning from user actions
+
+Deliverables
+• /tasks endpoints
+• Calendar sync
+• Push notifications
+• Digest API for mobile
+
+Goal:
+Turn email information into actions.
+
+🗓 Phase 3: Vertical Intelligence (6–9 months)
+
+Job Workflow Engine
+• Application detection
+• Interview pipeline UI
+• Auto status updater
+
+Finance Intelligence
+• Salary & transaction extraction
+• Expense summaries
+• Alerts
+
+Newsletter Topic Feed
+• Topic clustering
+• Preferences
+
+Goal:
+Become indispensable in daily life beyond email.
+
+🗓 Phase 4: Cross-Platform & Ecosystem (9–12 months)
+
+✔ Outlook & IMAP support
+✔ Integrations (Slack, Notion)
+✔ API for third-party developers
+✔ Webhooks
+
+Goal:
+Grow beyond Gmail; become an Inbox OS.
+
+🗓 Phase 5: Scale & Monetization (12–18 months)
+
+Paid Features
+• Multiple accounts
+• Priority support
+• Enterprise
+• Advanced analytics
+• Cross-platform sync
+• More LLM credits
+
+Expandable Features
+• Mobile app
+• Chrome extension
+• Team collaboration features
+• SSO & multi-user
+
+Goal:
+Monetize while strengthening retention.
+
+POSITIONING & WHY IT WILL WORK
+
+Superhuman: fast email client
+MailOS: smart email understan ding + action layer
+
+MailOS helps users who:
+✔ don’t want to manage email
+✔ want to reduce cognitive load
+✔ miss important context
+✔ want summaries not friction
+✔ want email to serve their life, not interrupt it
+
+WHO WOULD PAY?
+
+Your potential paying users include:
+
+🔹 Freelancers who need information clarity
+🔹 Job seekers needing pipeline tracking
+🔹 Professionals with heavy newsletters
+🔹 Founders who need inbox summaries
+🔹 Finance-savvy people
+🔹 Teams who share inbox responsibilities
+
+You are building a utility platform, not a niche gimmick.
+
+RISK & MITIGATION
+Risk	Mitigation
+AI hallucinates labels	Confidence thresholds, user review
+Gmail API limits	Batch requests, exponential backoff
+Privacy fears	Optional self-host, open source
+Existing AI + Gmail	You offer actions & workflow
+Monetization pushback	optional premium features

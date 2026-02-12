@@ -9,6 +9,7 @@ class NotificationCategory(str, Enum):
     EMAIL_INSIGHT = "email_insight"  # New email insights available
     DIGEST_READY = "digest_ready"    # Daily digest is ready
     RULE_TRIGGERED = "rule_triggered" # A rule was triggered
+    FOLLOW_UP = "follow_up"          # Follow-up reminder
     SYSTEM = "system"                # System notifications
     SECURITY = "security"            # Security-related alerts
     UPDATE = "update"                # Product updates

@@ -92,12 +92,8 @@ def assign_group(email: EmailInsight, ai_result: Dict[str, Any], session: Sessio
             UserIntentPreference.intent == intent
         )).first()
         
-        # If user has a preference, map it
-        # For now, we assume we can fetch the group name by ID or if we update the model to store name
-        # Since we don't have a Group table, we might need to assume preferred_group_id implies a mapping
-        # OR we update the plan/model to store 'preferred_group_name' instead of ID.
-        # But let's skip strict preference application for now and focus on Maps.
-        pass
+        if pref and pref.preferred_group_name:
+            return pref.preferred_group_name
 
     # 4. Intent Map
     if intent and intent in INTENT_GROUP_MAP:
