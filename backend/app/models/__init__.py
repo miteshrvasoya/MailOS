@@ -8,4 +8,5 @@ from .gmail_label import GmailLabel
 from .google_credential import GoogleCredential
 from .category import Category
 from .snoozed_email import SnoozedEmail
+from .digest import Digest
 

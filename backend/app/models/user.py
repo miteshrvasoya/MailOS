@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from .google_credential import GoogleCredential
     from .category import Category
     from .snoozed_email import SnoozedEmail
+    from .digest import Digest
 
 
 
@@ -48,5 +49,6 @@ class User(SQLModel, table=True):
     google_credential: Optional["GoogleCredential"] = Relationship(back_populates="user")
     categories: List["Category"] = Relationship(back_populates="user")
     snoozed_emails: List["SnoozedEmail"] = Relationship(back_populates="user")
+    digests: List["Digest"] = Relationship(back_populates="user")
 
 
