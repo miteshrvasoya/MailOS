@@ -32,6 +32,10 @@ class User(SQLModel, table=True):
     onboarding_step: str = Field(default="welcome") # welcome, mode_selection, category_selection, preview, confirm, completed
     onboarding_completed: bool = Field(default=False)
     selected_categories: Optional[str] = None # JSON string of selected categories
+    
+    # Sync State
+    last_history_id: Optional[str] = Field(default=None) # Gmail historyId for incremental sync
+    last_sync_at: Optional[datetime] = Field(default=None) # Timestamp of last successful sync
 
     # Relationships
     email_insights: List["EmailInsight"] = Relationship(back_populates="user")

@@ -1,11 +1,12 @@
 from typing import List, Dict, Any
 import uuid
+from datetime import datetime, timezone
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 from app.api import deps
 from app.models.user import User
-from app.services.gmail_service import GmailService
+from app.services.gmail_service import GmailService, HistoryExpiredError
 from app.services.email_processor import process_email_pipeline
 from app.models.google_credential import GoogleCredential
 from sqlmodel import select
@@ -17,16 +18,7 @@ router = APIRouter()
 
 @router.get("/status")
 def get_gmail_status(db: Session = Depends(deps.get_db), user_id: uuid.UUID = None): # TODO: Real auth
-    # For now, pass user_id as query param to match other mock endpoints if needed, 
-    # but ideally we get current_user from token.
-    # Let's support query param for consistency with 'sync' mock if we must, 
-    # but sync uses body. GET should use query.
-    # But wait, we have real auth in session on frontend.
-    # Let's rely on user_id passed from frontend for now or just standard deps.get_current_user logic if we had it.
-    # We will accept user_id param.
-    
     if not user_id:
-         # Fallback or error
          return {"connected": False, "write_access": False, "scopes": []}
          
     stmt = select(GoogleCredential).where(GoogleCredential.user_id == user_id)
@@ -48,17 +40,8 @@ def get_gmail_status(db: Session = Depends(deps.get_db), user_id: uuid.UUID = No
 def preview_sync(
     limit: int = 20, 
     db: Session = Depends(deps.get_db),
-    # User is fetched via deps if we have auth, 
-    # but here we might need manual user fetch if auth not fully set up in header? 
-    # But usually endpoints should restrict to current user.
-    # Assuming we have a dependency to get current_user, or simply pass user_id for now if dev flow.
-    # But for production, use deps.get_current_user.
-    # Let's assume we pass user_id in body for now matching previous mock sync, OR upgrade to proper auth.
-    # Previous mock sync took 'user_id' in body. Let's stick to that for consistency or upgrade.
-    # Let's try to get user from body to stay consistent with Onboarding flow which might not have full header auth yet?
-    # Actually onboarding has session.
 ):
-    # TODO: Refactor to usage real auth dependency
+    # TODO: Refactor to use real auth dependency
     pass
 
 
@@ -66,25 +49,47 @@ class SyncRequest(BaseModel):
     user_id: uuid.UUID
     limit: int = 50
     mode: str = "preview" # preview | full
+    force_full: bool = False  # Force full sync even if incremental is available
 
 @router.post("/sync")
 def sync_gmail(req: SyncRequest, db: Session = Depends(deps.get_db)):
-    print("Syncing Gmail for user: ", req.user_id)
     user = db.get(User, req.user_id)
-
-    print("User: ", user)
     if not user:
-        print("User not found")
         raise HTTPException(status_code=404, detail="User not found")
         
-    print("Syncing Gmail for user: ", user.id)
     logger.info(f"Starting Gmail sync for user {user.id} (mode: {req.mode})")
+    
     try:
         service = GmailService(user, db)
-        raw_emails = service.fetch_preview_emails(limit=req.limit)
-        print("Fetched {len(raw_emails)} raw emails from Gmail for user {user.id}")
-        logger.info(f"Fetched {len(raw_emails)} raw emails from Gmail for user {user.id}")
+        raw_emails = []
+        new_history_id = None
+        sync_type = "full"  # Track sync type for response
         
+        # Attempt incremental sync if we have a history ID and not forcing full sync
+        if user.last_history_id and not req.force_full:
+            try:
+                raw_emails, new_history_id = service.fetch_new_emails(user.last_history_id)
+                sync_type = "incremental"
+                logger.info(f"Incremental sync: {len(raw_emails)} new emails for user {user.id}")
+            except HistoryExpiredError:
+                logger.warning(f"History expired for user {user.id}, falling back to full sync")
+                raw_emails = []  # Will trigger full sync below
+                
+        # Full sync: first time or fallback
+        if not raw_emails and sync_type == "full" or (sync_type == "incremental" and not raw_emails and not new_history_id):
+            raw_emails = service.fetch_preview_emails(limit=req.limit)
+            sync_type = "full"
+            logger.info(f"Full sync: fetched {len(raw_emails)} emails for user {user.id}")
+        
+        # Always capture the latest history ID
+        if not new_history_id:
+            try:
+                profile = service.get_profile()
+                new_history_id = profile.get('historyId')
+            except Exception as e:
+                logger.warning(f"Failed to fetch profile for historyId: {e}")
+        
+        # Process emails through the pipeline
         results = []
         for email_data in raw_emails:
             try:
@@ -92,32 +97,35 @@ def sync_gmail(req: SyncRequest, db: Session = Depends(deps.get_db)):
                 result = process_email_pipeline(db, user, email_data, is_preview=is_preview, gmail_service=service)
                 results.append(result.insight)
             except Exception as e:
-                # likely duplicate or error
-                print("Skipping email {email_data.get('gmail_message_id')} due to error: {e}")
                 logger.debug(f"Skipping email {email_data.get('gmail_message_id')} due to error: {e}")
                 continue
                 
+        # Update user's sync state
+        if new_history_id:
+            user.last_history_id = new_history_id
+        user.last_sync_at = datetime.now(timezone.utc)
+        db.add(user)
+        db.commit()
+        
         # Aggregate stats
         categories = {}
         for r in results:
             cat = r.category
             categories[cat] = categories.get(cat, 0) + 1
             
-        print(f"Sync complete for user {user.id}. Processed {len(results)} new insights.")
-        logger.info(f"Sync complete for user {user.id}. Processed {len(results)} new insights.")
-
-        # print("Results: ", results)
+        logger.info(f"Sync complete for user {user.id}. Type: {sync_type}, Processed: {len(results)}")
 
         return {
             "count": len(results),
+            "sync_type": sync_type,
             "groups": [{"name": k, "count": v} for k, v in categories.items()],
             "preview_items": [
                 {"subject": r.subject, "category": r.category, "confidence": r.importance_score} 
                 for r in results[:5]
-            ]
+            ],
+            "last_sync_at": user.last_sync_at.isoformat() if user.last_sync_at else None
         }
             
     except Exception as e:
-        print("Gmail Sync Error for user: ", user.id)
         logger.error(f"Gmail Sync Error for user {user.id}: {e}")
         raise HTTPException(status_code=400, detail=str(e))

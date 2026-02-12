@@ -165,3 +165,100 @@ class GmailService:
         except Exception as e:
             logger.error(f"Failed to apply label {gmail_label_id} to {gmail_message_id}: {e}")
             raise e
+
+    def _parse_message(self, full_msg: Dict[str, Any]) -> Dict[str, Any]:
+        """Parse a Gmail message into a standardized dict."""
+        headers = full_msg['payload'].get('headers', [])
+        subject = next((h['value'] for h in headers if h['name'] == 'Subject'), '(No Subject)')
+        sender = next((h['value'] for h in headers if h['name'] == 'From'), '(Unknown Sender)')
+        date_str = next((h['value'] for h in headers if h['name'] == 'Date'), None)
+        sent_at = None
+        if date_str:
+            try:
+                sent_at = email.utils.parsedate_to_datetime(date_str)
+            except Exception as e:
+                logger.warning(f"Failed to parse date string '{date_str}': {e}")
+
+        snippet = full_msg.get('snippet', '')
+
+        return {
+            "gmail_message_id": full_msg['id'],
+            "thread_id": full_msg['threadId'],
+            "subject": subject,
+            "sender": sender,
+            "sent_at": sent_at,
+            "snippet": snippet,
+            "body": snippet
+        }
+
+    def get_profile(self) -> Dict[str, Any]:
+        """Get Gmail profile including current historyId."""
+        try:
+            profile = self.service.users().getProfile(userId='me').execute()
+            return profile
+        except Exception as e:
+            logger.error(f"Failed to get Gmail profile: {e}")
+            raise e
+
+    def fetch_new_emails(self, start_history_id: str) -> tuple:
+        """
+        Fetch only new emails since last sync using Gmail History API.
+        Returns (list_of_email_dicts, new_history_id).
+        Raises HistoryExpiredError if the historyId is too old.
+        """
+        try:
+            new_message_ids = set()
+            page_token = None
+            new_history_id = start_history_id
+
+            while True:
+                params = {
+                    'userId': 'me',
+                    'startHistoryId': start_history_id,
+                    'historyTypes': ['messageAdded'],
+                }
+                if page_token:
+                    params['pageToken'] = page_token
+
+                history_response = self.service.users().history().list(**params).execute()
+                
+                history_records = history_response.get('history', [])
+                for record in history_records:
+                    for msg_added in record.get('messagesAdded', []):
+                        msg = msg_added.get('message', {})
+                        labels = msg.get('labelIds', [])
+                        if 'INBOX' in labels:
+                            new_message_ids.add(msg['id'])
+
+                new_history_id = history_response.get('historyId', new_history_id)
+                page_token = history_response.get('nextPageToken')
+                if not page_token:
+                    break
+
+            # Fetch full details for each new message
+            preview_data = []
+            for msg_id in new_message_ids:
+                try:
+                    full_msg = self.service.users().messages().get(
+                        userId='me', id=msg_id, format='full'
+                    ).execute()
+                    preview_data.append(self._parse_message(full_msg))
+                except Exception as e:
+                    logger.warning(f"Failed to fetch message {msg_id}: {e}")
+                    continue
+
+            logger.info(f"Incremental sync: {len(new_message_ids)} new messages found")
+            return preview_data, new_history_id
+
+        except Exception as e:
+            error_str = str(e)
+            if '404' in error_str or 'notFound' in error_str:
+                logger.warning("History expired, falling back to full sync")
+                raise HistoryExpiredError("Gmail history has expired, full sync required")
+            logger.error(f"Incremental sync failed: {e}")
+            raise e
+
+
+class HistoryExpiredError(Exception):
+    """Raised when Gmail history ID is no longer valid."""
+    pass

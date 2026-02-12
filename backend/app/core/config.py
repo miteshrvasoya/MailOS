@@ -21,6 +21,13 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: Optional[str] = None
     GOOGLE_REDIRECT_URI: Optional[str] = "http://localhost:3000/api/auth/callback/google"
 
+    # SMTP / Admin Notifications
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: Optional[str] = None  # e.g., mailos.precizn@gmail.com
+    SMTP_PASSWORD: Optional[str] = None  # Gmail App Password
+    ADMIN_NOTIFY_EMAIL: str = "mailos.precizn@gmail.com"
+
     
     POSTGRES_SERVER: str
     POSTGRES_USER: str

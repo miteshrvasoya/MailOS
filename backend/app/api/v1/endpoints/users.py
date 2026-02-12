@@ -39,6 +39,7 @@ def upsert_user(user_data: UserUpsert, db: Session = Depends(deps.get_db)):
     
     if db_user:
         # Update existing user
+        print(f"[USERS] Existing user found: {db_user.email} — skipping signup notification")
         db_user.full_name = user_data.full_name
         db_user.updated_at = datetime.utcnow()
         db.add(db_user)
@@ -46,6 +47,7 @@ def upsert_user(user_data: UserUpsert, db: Session = Depends(deps.get_db)):
         db.refresh(db_user)
     else:
         # Create new user
+        print(f"[USERS] NEW USER detected: {user_data.email} — will send signup notification")
         new_user = User(
             email=user_data.email,
             full_name=user_data.full_name,
@@ -54,6 +56,12 @@ def upsert_user(user_data: UserUpsert, db: Session = Depends(deps.get_db)):
         db.commit()
         db.refresh(new_user)
         db_user = new_user
+        
+        # Notify admin about new signup (non-blocking)
+        print(f"[USERS] Calling notify_new_user_signup...")
+        from app.services.admin_notifier import notify_new_user_signup
+        notify_new_user_signup(user_email=db_user.email, user_name=db_user.full_name)
+        print(f"[USERS] notify_new_user_signup returned")
     
     # Update Google Credentials
     if user_data.access_token:
