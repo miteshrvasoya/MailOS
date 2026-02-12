@@ -2,13 +2,15 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { MailOpen, LayoutGrid, Inbox, Settings, FileText, BarChart3, MessageSquare, Sliders, User, Bell, Sparkles } from 'lucide-react'
+import { MailOpen, LayoutGrid, Inbox, Settings, FileText, BarChart3, MessageSquare, Sliders, User, Bell, Sparkles, Reply, AlarmClock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSession } from 'next-auth/react'
 
 const navItems = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
   { label: 'AI Suggestions', href: '/dashboard/suggestions', icon: Sparkles },
+  { label: 'Follow-Ups', href: '/dashboard/follow-ups', icon: Reply },
+  { label: 'Snoozed', href: '/dashboard/snoozed', icon: AlarmClock },
   { label: 'Notifications', href: '/dashboard/notifications', icon: Bell },
   { label: 'Groups', href: '/dashboard/groups', icon: Inbox },
   { label: 'Digests', href: '/dashboard/digests', icon: FileText },

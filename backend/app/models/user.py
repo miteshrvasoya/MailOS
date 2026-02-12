@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from .gmail_label import GmailLabel
     from .google_credential import GoogleCredential
     from .category import Category
+    from .snoozed_email import SnoozedEmail
 
 
 
@@ -46,5 +47,6 @@ class User(SQLModel, table=True):
     gmail_labels: List["GmailLabel"] = Relationship(back_populates="user")
     google_credential: Optional["GoogleCredential"] = Relationship(back_populates="user")
     categories: List["Category"] = Relationship(back_populates="user")
+    snoozed_emails: List["SnoozedEmail"] = Relationship(back_populates="user")
 
 

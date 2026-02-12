@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import users, emails, rules, dashboard, notifications, feedback, actions, onboarding, gmail, categories
+from app.api.v1.endpoints import users, emails, rules, dashboard, notifications, feedback, actions, onboarding, gmail, categories, follow_ups, snooze
 
 api_router = APIRouter()
 api_router.include_router(users.router, prefix="/users", tags=["users"])
@@ -12,4 +12,6 @@ api_router.include_router(actions.router, prefix="/actions", tags=["actions"])
 api_router.include_router(onboarding.router, prefix="/onboarding", tags=["onboarding"])
 api_router.include_router(gmail.router, prefix="/gmail", tags=["gmail"])
 api_router.include_router(categories.router, prefix="/categories", tags=["categories"])
+api_router.include_router(follow_ups.router, prefix="/follow-ups", tags=["follow-ups"])
+api_router.include_router(snooze.router, prefix="/snooze", tags=["snooze"])
 
