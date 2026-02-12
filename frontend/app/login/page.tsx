@@ -2,12 +2,22 @@
 
 import { Header } from '@/components/header'
 import { Button } from '@/components/ui/button'
-import { MailOpen } from 'lucide-react'
-import { signIn } from 'next-auth/react'
-import { useState } from 'react'
+import { MailOpen, Loader2 } from 'lucide-react'
+import { signIn, useSession } from 'next-auth/react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
+  const { data: session, status } = useSession()
+  const router = useRouter()
+
+  // Redirect to dashboard if already logged in
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user) {
+      router.replace('/dashboard')
+    }
+  }, [status, session, router])
 
   const handleLogin = async () => {
     try {
@@ -18,6 +28,18 @@ export default function LoginPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // Show loading while checking auth or redirecting
+  if (status === 'loading' || (status === 'authenticated' && session?.user)) {
+    return (
+      <main className="min-h-screen bg-background flex flex-col">
+        <Header />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </main>
+    )
   }
 
   return (
@@ -77,7 +99,7 @@ export default function LoginPage() {
               By signing in, you agree to our Terms of Service and Privacy Policy.
             </p>
             <p>
-              Don't have an account? We'll create one automatically when you sign in.
+              Don&apos;t have an account? We&apos;ll create one automatically when you sign in.
             </p>
           </div>
         </div>

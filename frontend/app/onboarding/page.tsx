@@ -32,6 +32,7 @@ export default function OnboardingPage() {
   )
   const [previewResults, setPreviewResults] = useState<{category: string, count: number}[]>([])
   const [loading, setLoading] = useState(false)
+  const [syncInProgress, setSyncInProgress] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -58,19 +59,20 @@ export default function OnboardingPage() {
       }
     }
     
-    // If moving to preview step, fetch data
+    // If moving to preview step, kick off sync in the BACKGROUND (non-blocking)
     if (currentStep === 3) {
-      setLoading(true)
-      try {
-        const res = await api.post('/gmail/sync', { user_id: userId, mode: 'preview' })
-        const groups = res.data.groups || []
-        // Map backend 'name' to frontend 'category'
-        setPreviewResults(groups.map((g: any) => ({ category: g.name, count: g.count })))
-      } catch (e) {
-        console.error('Preview failed:', e)
-      } finally {
-        setLoading(false)
-      }
+      setSyncInProgress(true)
+      api.post('/gmail/sync', { user_id: userId, mode: 'preview' })
+        .then(res => {
+          const groups = res.data.groups || []
+          setPreviewResults(groups.map((g: any) => ({ category: g.name, count: g.count })))
+        })
+        .catch(e => {
+          console.error('Background sync failed:', e)
+        })
+        .finally(() => {
+          setSyncInProgress(false)
+        })
     }
     
     setCurrentStep(prev => Math.min(prev + 1, STEPS.length - 1))
@@ -270,15 +272,16 @@ export default function OnboardingPage() {
       <Card className="p-8">
         <StepIndicator />
         <h2 className="text-2xl font-bold mb-2 text-center">
-          {loading ? 'Scanning your inbox...' : 'Here\'s what we found'}
+          {syncInProgress && previewResults.length === 0 ? 'Scanning your inbox...' : 'Here\'s what we found'}
         </h2>
         <p className="text-muted-foreground mb-8 text-center">
-          {loading ? 'This may take a moment.' : 'Nothing has been changed yet.'}
+          {syncInProgress ? 'Sync is running in the background. You can continue anytime.' : 'Nothing has been changed yet.'}
         </p>
         
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        {syncInProgress && previewResults.length === 0 ? (
+          <div className="flex flex-col items-center py-8 gap-3">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">This won&apos;t take long...</p>
           </div>
         ) : (
           <div className="space-y-3 mb-8">
@@ -293,11 +296,17 @@ export default function OnboardingPage() {
                 </span>
               </div>
             ))}
+            {syncInProgress && (
+              <div className="flex items-center gap-2 justify-center text-sm text-muted-foreground mt-2">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Still syncing...
+              </div>
+            )}
           </div>
         )}
         
-        <Button className="w-full" size="lg" onClick={nextStep} disabled={loading}>
-          Looks good <ChevronRight className="h-4 w-4 ml-2" />
+        <Button className="w-full" size="lg" onClick={nextStep}>
+          {previewResults.length > 0 ? 'Looks good' : 'Continue'} <ChevronRight className="h-4 w-4 ml-2" />
         </Button>
       </Card>
     )

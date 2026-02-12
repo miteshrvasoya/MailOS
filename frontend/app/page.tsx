@@ -3,10 +3,13 @@
 import Link from 'next/link'
 import { Header } from '@/components/header'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, Shield, Zap, Lock, Filter, Brain, Settings, Download } from 'lucide-react'
-import { signIn } from 'next-auth/react'
+import { ArrowRight, Shield, Zap, Lock, Filter, Brain, Settings, LayoutDashboard } from 'lucide-react'
+import { signIn, useSession } from 'next-auth/react'
 
 export default function LandingPage() {
+  const { data: session, status } = useSession()
+  const isLoggedIn = status === 'authenticated' && !!session?.user
+
   const handleGoogleSignIn = () => {
     signIn('google', { callbackUrl: '/dashboard' })
   }
@@ -24,23 +27,27 @@ export default function LandingPage() {
           <p className="text-xl text-muted-foreground text-balance max-w-2xl mx-auto">
             AI that understands your emails, prioritizes what matters, and sends you daily clarity.
           </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Button size="lg" onClick={handleGoogleSignIn}>
-              <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#000000" />
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34a853"/>
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#fbbc05"/>
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#ea4335"/>
-              </svg>
-              Sign In with Google to Join Early Access
-            </Button>
-
-            <Button size="lg" variant="outline" asChild>
-              <a href="/extension-install" target="_blank" rel="noopener noreferrer">
-                <Download className="w-4 h-4 mr-2" />
-                Chrome Extension
-              </a>
-            </Button>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            {isLoggedIn ? (
+              <Button size="lg" variant="glow" asChild className="group">
+                <Link href="/dashboard">
+                  <LayoutDashboard className="w-5 h-5 mr-2" />
+                  Go to Dashboard
+                  <ArrowRight className="w-4 h-4 ml-1 transition-transform duration-200 group-hover:translate-x-1" />
+                </Link>
+              </Button>
+            ) : (
+              <Button size="lg" variant="glow" onClick={handleGoogleSignIn} className="group">
+                <svg className="w-5 h-5 mr-2 transition-transform duration-200 group-hover:scale-110" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34a853"/>
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#fbbc05"/>
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#ea4335"/>
+                </svg>
+                Login / Sign Up with Google
+                <ArrowRight className="w-4 h-4 ml-1 transition-transform duration-200 group-hover:translate-x-1" />
+              </Button>
+            )}
           </div>
         </div>
       </section>
@@ -408,69 +415,40 @@ export default function LandingPage() {
         </div>
       </section>
       
-      {/* Chrome Extension Section */}
-      <section className="px-6 py-20 max-w-7xl mx-auto">
-        <div className="bg-card border border-border/50 rounded-xl p-8 md:p-12">
-          <div className="grid md:grid-cols-2 gap-8 items-center">
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <h2 className="text-4xl font-bold text-foreground">Get MailOS everywhere</h2>
-                <p className="text-lg text-muted-foreground">Install our Chrome extension for quick access to your dashboard, insights, and rules.</p>
-              </div>
-              
-              <div className="space-y-3">
-                <div className="flex gap-3">
-                  <span className="text-primary font-bold">✓</span>
-                  <p className="text-muted-foreground">One-click access to your dashboard</p>
-                </div>
-                <div className="flex gap-3">
-                  <span className="text-primary font-bold">✓</span>
-                  <p className="text-muted-foreground">View email groups and insights instantly</p>
-                </div>
-                <div className="flex gap-3">
-                  <span className="text-primary font-bold">✓</span>
-                  <p className="text-muted-foreground">Manage rules from anywhere</p>
-                </div>
-                <div className="flex gap-3">
-                  <span className="text-primary font-bold">✓</span>
-                  <p className="text-muted-foreground">Works seamlessly with Gmail</p>
-                </div>
-              </div>
-              
-              <Button size="lg" asChild className="bg-primary hover:bg-primary/90 text-background font-semibold">
-                <a href="/extension-install" target="_blank" rel="noopener noreferrer">
-                  <Download className="w-5 h-5 mr-2" />
-                  Download Chrome Extension
-                </a>
-              </Button>
-            </div>
-            
-            <div className="bg-secondary/20 rounded-lg p-8 border border-border/30 flex flex-col items-center justify-center min-h-64">
-              <div className="text-6xl mb-4">⬇️</div>
-              <p className="text-muted-foreground text-center">Available on Chrome Web Store</p>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Chrome Extension Section - Hidden for now */}
 
       {/* CTA */}
-      <section id="waitlist" className="px-6 py-20 bg-card border-t border-border">
+      <section id="waitlist" className="px-6 py-24 bg-card border-t border-border">
         <div className="max-w-3xl mx-auto text-center space-y-8">
           <div className="space-y-4">
-            <h2 className="text-4xl font-bold">Ready for inbox clarity?</h2>
-            <p className="text-muted-foreground">Join hundreds of productivity-focused professionals.</p>
+            <h2 className="text-4xl font-bold">{isLoggedIn ? 'Welcome back!' : 'Ready for inbox clarity?'}</h2>
+            <p className="text-muted-foreground text-lg">
+              {isLoggedIn 
+                ? 'Your intelligent inbox is waiting for you.' 
+                : 'Join hundreds of productivity-focused professionals already using MailOS.'}
+            </p>
           </div>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-             <Button size="lg" onClick={handleGoogleSignIn}>
-              <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#000000" />
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34a853"/>
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#fbbc05"/>
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#ea4335"/>
-              </svg>
-              Sign In with Google to Join Early Access
-            </Button>
-
+            {isLoggedIn ? (
+              <Button size="lg" variant="glow" asChild className="group">
+                <Link href="/dashboard">
+                  <LayoutDashboard className="w-5 h-5 mr-2" />
+                  Go to Dashboard
+                  <ArrowRight className="w-4 h-4 ml-1 transition-transform duration-200 group-hover:translate-x-1" />
+                </Link>
+              </Button>
+            ) : (
+              <Button size="lg" variant="glow" onClick={handleGoogleSignIn} className="group">
+                <svg className="w-5 h-5 mr-2 transition-transform duration-200 group-hover:scale-110" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34a853"/>
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#fbbc05"/>
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#ea4335"/>
+                </svg>
+                Login / Sign Up with Google
+                <ArrowRight className="w-4 h-4 ml-1 transition-transform duration-200 group-hover:translate-x-1" />
+              </Button>
+            )}
           </div>
         </div>
       </section>
@@ -478,7 +456,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-border bg-card py-12">
         <div className="max-w-7xl mx-auto px-6 text-center text-sm text-muted-foreground">
-          <p>&copy; 2024 MailOS. All rights reserved.</p>
+          <p>&copy; 2026 MailOS. All rights reserved.</p>
         </div>
       </footer>
     </main>
