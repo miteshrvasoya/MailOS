@@ -2,9 +2,9 @@
 
 import Script from 'next/script';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 
-export default function GoogleAnalytics({ GA_MEASUREMENT_ID }: { GA_MEASUREMENT_ID: string }) {
+function AnalyticsInner({ GA_MEASUREMENT_ID }: { GA_MEASUREMENT_ID: string }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -17,6 +17,10 @@ export default function GoogleAnalytics({ GA_MEASUREMENT_ID }: { GA_MEASUREMENT_
     }
   }, [pathname, searchParams, GA_MEASUREMENT_ID]);
 
+  return null;
+}
+
+export default function GoogleAnalytics({ GA_MEASUREMENT_ID }: { GA_MEASUREMENT_ID: string }) {
   return (
     <>
       <Script
@@ -38,6 +42,9 @@ export default function GoogleAnalytics({ GA_MEASUREMENT_ID }: { GA_MEASUREMENT_
           `,
         }}
       />
+      <Suspense fallback={null}>
+        <AnalyticsInner GA_MEASUREMENT_ID={GA_MEASUREMENT_ID} />
+      </Suspense>
     </>
   );
 }
