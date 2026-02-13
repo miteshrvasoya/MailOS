@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     OPENROUTER_API_KEY: Optional[str] = None
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
     AI_MODEL: str = "arcee-ai/trinity-large-preview:free"
+    AI_BATCH_SIZE: int = 5  # Number of emails to classify per API call
     
     # Gmail Integration
     GOOGLE_CLIENT_ID: Optional[str] = None

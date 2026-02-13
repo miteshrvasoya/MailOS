@@ -7,10 +7,11 @@ from sqlmodel import Session
 from app.api import deps
 from app.models.user import User
 from app.services.gmail_service import GmailService, HistoryExpiredError
-from app.services.email_processor import process_email_pipeline
+from app.services.email_processor import process_emails_batch
 from app.models.google_credential import GoogleCredential
 from sqlmodel import select
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -89,16 +90,13 @@ def sync_gmail(req: SyncRequest, db: Session = Depends(deps.get_db)):
             except Exception as e:
                 logger.warning(f"Failed to fetch profile for historyId: {e}")
         
-        # Process emails through the pipeline
-        results = []
-        for email_data in raw_emails:
-            try:
-                is_preview = (req.mode == "preview")
-                result = process_email_pipeline(db, user, email_data, is_preview=is_preview, gmail_service=service)
-                results.append(result.insight)
-            except Exception as e:
-                logger.debug(f"Skipping email {email_data.get('gmail_message_id')} due to error: {e}")
-                continue
+        # Process emails through batch pipeline
+        start_time = time.time()
+        batch_results = process_emails_batch(
+            db, user, raw_emails, is_preview=(req.mode == "preview"), gmail_service=service
+        )
+        processing_time = round(time.time() - start_time, 2)
+        results = [r.insight for r in batch_results]
                 
         # Update user's sync state
         if new_history_id:
@@ -118,6 +116,7 @@ def sync_gmail(req: SyncRequest, db: Session = Depends(deps.get_db)):
         return {
             "count": len(results),
             "sync_type": sync_type,
+            "processing_time_seconds": processing_time,
             "groups": [{"name": k, "count": v} for k, v in categories.items()],
             "preview_items": [
                 {"subject": r.subject, "category": r.category, "confidence": r.importance_score} 

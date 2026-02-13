@@ -9,7 +9,7 @@ from app.db.session import engine
 from app.models.user import User
 from app.models.google_credential import GoogleCredential
 from app.services.gmail_service import GmailService, HistoryExpiredError
-from app.services.email_processor import process_email_pipeline
+from app.services.email_processor import process_emails_batch
 
 logger = logging.getLogger(__name__)
 
@@ -50,15 +50,11 @@ def sync_user_emails(user: User, db: Session) -> dict:
             except Exception as e:
                 logger.warning(f"Failed to get historyId for user {user.id}: {e}")
 
-        # Process through pipeline
-        processed = 0
-        for email_data in raw_emails:
-            try:
-                process_email_pipeline(db, user, email_data, is_preview=False, gmail_service=service)
-                processed += 1
-            except Exception as e:
-                logger.debug(f"Skipping email {email_data.get('gmail_message_id')}: {e}")
-                continue
+        # Process through batch pipeline
+        batch_results = process_emails_batch(
+            db, user, raw_emails, is_preview=False, gmail_service=service
+        )
+        processed = len(batch_results)
 
         # Update sync state
         if new_history_id:

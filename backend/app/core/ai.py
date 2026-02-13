@@ -214,6 +214,176 @@ Output JSON Schema:
         }
 
 
+# ─── Batch AI Classification ────────────────────────────────────
+
+def classify_emails_batch(
+    emails: list[Dict[str, str]],
+    db=None,
+    user_id: Optional[uuid.UUID] = None,
+) -> list[Dict[str, Any]]:
+    """
+    Classify multiple emails in a single API call.
+    Each email in the list should have: subject, body, sender.
+    Returns a list of classification dicts in the same order.
+    Falls back to individual classification on failure.
+    """
+    if not emails:
+        return []
+
+    # If only 1 email, use the single classifier
+    if len(emails) == 1:
+        e = emails[0]
+        return [classify_email(e.get("subject", ""), e.get("body", ""), e.get("sender", ""), db=db, user_id=user_id)]
+
+    print(f"Batch Classification (REST API) — {len(emails)} emails ---")
+
+    # Preprocess all emails
+    cleaned = [preprocess_email(e.get("subject", ""), e.get("body", ""), e.get("sender", "")) for e in emails]
+
+    # Build the batch prompt
+    email_blocks = []
+    for i, c in enumerate(cleaned):
+        email_blocks.append(
+            f"--- Email {i+1} ---\n"
+            f"Sender: {c['sender']}\n"
+            f"Subject: {c['subject']}\n"
+            f"Body: {c['body']}"
+        )
+
+    joined = "\n\n".join(email_blocks)
+
+    system_message = "You are an email classification assistant. You will receive multiple emails to classify. Respond ONLY with a valid JSON array."
+    user_message = f"""Classify each of the following {len(emails)} emails. Return a JSON array with exactly {len(emails)} objects, one per email, in the same order.
+
+{joined}
+
+Each object in the array must have this schema:
+{{
+  "category": "High-level bucket (Work, Personal, Newsletter, Finance, Security, Promo, Travel, Job)",
+  "intent": "Fine-grained intent (e.g., meeting_request, invoice, otp, ad, job_application, interview_invitation)",
+  "importance_score": 0-100 (float),
+  "needs_reply": boolean,
+  "urgency": "low" | "medium" | "high",
+  "explanation": "Short reason for classification"
+}}
+
+Return ONLY the JSON array, no extra text."""
+
+    messages = [
+        {"role": "system", "content": system_message},
+        {"role": "user", "content": user_message},
+    ]
+
+    model = settings.AI_MODEL
+
+    try:
+        response_data = _call_openrouter(
+            messages=messages,
+            model=model,
+            temperature=0,
+            response_format={"type": "json_object"},
+        )
+
+        choice = response_data["choices"][0]
+        content = choice["message"]["content"]
+        finish_reason = choice.get("finish_reason", "unknown")
+        usage = response_data.get("usage", {})
+        latency_ms = response_data.get("_latency_ms", 0)
+
+        # Parse — handle both raw array and wrapped object
+        parsed = json.loads(content)
+        if isinstance(parsed, dict):
+            # Some models wrap in {"classifications": [...]} or {"results": [...]}
+            for key in ("classifications", "results", "emails", "data"):
+                if key in parsed and isinstance(parsed[key], list):
+                    parsed = parsed[key]
+                    break
+            else:
+                # If it's a single object, wrap it
+                if "category" in parsed:
+                    parsed = [parsed]
+
+        if not isinstance(parsed, list) or len(parsed) != len(emails):
+            print(f"Batch parse mismatch: expected {len(emails)}, got {len(parsed) if isinstance(parsed, list) else 'non-list'}. Falling back.")
+            raise ValueError("Batch response count mismatch")
+
+        print(f"Batch AI Response (model={response_data.get('model', model)}, "
+              f"tokens={usage.get('total_tokens', 0)}, "
+              f"latency={latency_ms}ms): {len(parsed)} classifications")
+
+        # Log to database
+        if db:
+            _save_log(
+                db=db,
+                user_id=user_id,
+                email_id=None,
+                model=response_data.get("model", model),
+                messages=messages,
+                temperature=0,
+                response_content=content,
+                parsed_result={"batch_size": len(parsed), "results": parsed},
+                finish_reason=finish_reason,
+                prompt_tokens=usage.get("prompt_tokens", 0),
+                completion_tokens=usage.get("completion_tokens", 0),
+                total_tokens=usage.get("total_tokens", 0),
+                cost=usage.get("cost", 0),
+                latency_ms=latency_ms,
+                status="success",
+                purpose="classify_email_batch",
+            )
+
+        # Ensure each result has all required fields
+        defaults = {
+            "category": "Uncategorized",
+            "intent": "unknown",
+            "importance_score": 0.0,
+            "needs_reply": False,
+            "urgency": "low",
+            "explanation": "",
+        }
+        sanitized = []
+        for r in parsed:
+            item = {**defaults, **(r if isinstance(r, dict) else {})}
+            sanitized.append(item)
+
+        return sanitized
+
+    except Exception as e:
+        print(f"Batch classification failed: {e}. Falling back to individual classification.")
+
+        # Log error
+        if db:
+            _save_log(
+                db=db,
+                user_id=user_id,
+                email_id=None,
+                model=model,
+                messages=messages,
+                temperature=0,
+                response_content=None,
+                parsed_result=None,
+                finish_reason=None,
+                prompt_tokens=0,
+                completion_tokens=0,
+                total_tokens=0,
+                cost=0,
+                latency_ms=0,
+                status="error",
+                purpose="classify_email_batch",
+                error=str(e),
+            )
+
+        # Fallback: classify individually
+        results = []
+        for em in emails:
+            result = classify_email(
+                em.get("subject", ""), em.get("body", ""), em.get("sender", ""),
+                db=db, user_id=user_id,
+            )
+            results.append(result)
+        return results
+
+
 # ─── Log Helper ───────────────────────────────────────────────────
 
 def _save_log(

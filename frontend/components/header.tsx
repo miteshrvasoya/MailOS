@@ -57,22 +57,20 @@ export function Header() {
           <span className="font-semibold text-lg">MailOS</span>
         </Link>
         
-        {!isLoggedIn && (
-          <nav className="hidden md:flex items-center gap-8">
-            <Link href="/#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200">
-              Features
-            </Link>
-            <Link href="/#how-it-works" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200">
-              How It Works
-            </Link>
-            <Link href="/pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200">
-              Pricing
-            </Link>
-            <Link href="/security" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200">
-              Security
-            </Link>
-          </nav>
-        )}
+        <nav className="hidden md:flex items-center gap-8">
+          <Link href="/features" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200">
+            Features
+          </Link>
+          <Link href="/#how-it-works" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200">
+            How It Works
+          </Link>
+          <Link href="/pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200">
+            Pricing
+          </Link>
+          <Link href="/security" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200">
+            Security
+          </Link>
+        </nav>
         
         {!isLoggedIn && status !== 'loading' && (
           <div className="flex items-center gap-3">

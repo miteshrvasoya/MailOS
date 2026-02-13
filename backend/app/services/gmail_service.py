@@ -1,4 +1,5 @@
 from typing import List, Dict, Any, Optional
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
@@ -12,6 +13,9 @@ import email.utils
 from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
+
+# Max concurrent Gmail API calls
+GMAIL_FETCH_WORKERS = 10
 
 class GmailService:
     def __init__(self, user: User, db: Session):
@@ -55,47 +59,54 @@ class GmailService:
                 
         return creds
 
+    def _fetch_single_message(self, msg_id: str) -> Optional[Dict[str, Any]]:
+        """Fetch and parse a single Gmail message. Thread-safe."""
+        try:
+            full_msg = self.service.users().messages().get(
+                userId='me', id=msg_id, format='full'
+            ).execute()
+            return self._parse_message(full_msg)
+        except Exception as e:
+            logger.warning(f"Failed to fetch message {msg_id}: {e}")
+            return None
+
+    def _fetch_messages_concurrent(self, message_ids: List[str]) -> List[Dict[str, Any]]:
+        """
+        Fetch multiple Gmail messages concurrently using ThreadPoolExecutor.
+        Returns parsed email dicts in order, skipping failures.
+        """
+        if not message_ids:
+            return []
+
+        results: List[Optional[Dict[str, Any]]] = [None] * len(message_ids)
+
+        with ThreadPoolExecutor(max_workers=GMAIL_FETCH_WORKERS) as executor:
+            future_to_idx = {
+                executor.submit(self._fetch_single_message, mid): idx
+                for idx, mid in enumerate(message_ids)
+            }
+            for future in as_completed(future_to_idx):
+                idx = future_to_idx[future]
+                try:
+                    results[idx] = future.result()
+                except Exception as e:
+                    logger.warning(f"Concurrent fetch error for index {idx}: {e}")
+
+        return [r for r in results if r is not None]
+
     def fetch_preview_emails(self, limit: int = 50) -> List[Dict[str, Any]]:
         """
-        Fetch recent emails for preview. Read-only scope is sufficient.
+        Fetch recent emails for preview using concurrent fetching.
         """
         try:
-            # q='newer_than:7d'
-            results = self.service.users().messages().list(userId='me', q='newer_than:7d', maxResults=limit).execute()
+            results = self.service.users().messages().list(
+                userId='me', q='newer_than:7d', maxResults=limit
+            ).execute()
             messages = results.get('messages', [])
-            
-            preview_data = []
-            for msg in messages:
-                try:
-                    full_msg = self.service.users().messages().get(userId='me', id=msg['id'], format='full').execute()
-                    
-                    headers = full_msg['payload'].get('headers', [])
-                    subject = next((h['value'] for h in headers if h['name'] == 'Subject'), '(No Subject)')
-                    sender = next((h['value'] for h in headers if h['name'] == 'From'), '(Unknown Sender)')
-                    date_str = next((h['value'] for h in headers if h['name'] == 'Date'), None)
-                    sent_at = None
-                    if date_str:
-                        try:
-                            sent_at = email.utils.parsedate_to_datetime(date_str)
-                        except Exception as e:
-                            logger.warning(f"Failed to parse date string '{date_str}': {e}")
+            message_ids = [msg['id'] for msg in messages]
 
-                    snippet = full_msg.get('snippet', '')
-                    
-                    preview_data.append({
-                        "gmail_message_id": msg['id'],
-                        "thread_id": msg['threadId'],
-                        "subject": subject,
-                        "sender": sender,
-                        "sent_at": sent_at,
-                        "snippet": snippet,
-                        "body": snippet # Simplified for preview
-                    })
-                except Exception as e:
-                    logger.warning(f"Failed to fetch details for message {msg['id']}: {e}")
-                    continue
-                
-            return preview_data
+            logger.info(f"Fetching {len(message_ids)} messages concurrently...")
+            return self._fetch_messages_concurrent(message_ids)
         except Exception as e:
             logger.error(f"Gmail API list failed: {e}")
             raise e
@@ -235,19 +246,9 @@ class GmailService:
                 if not page_token:
                     break
 
-            # Fetch full details for each new message
-            preview_data = []
-            for msg_id in new_message_ids:
-                try:
-                    full_msg = self.service.users().messages().get(
-                        userId='me', id=msg_id, format='full'
-                    ).execute()
-                    preview_data.append(self._parse_message(full_msg))
-                except Exception as e:
-                    logger.warning(f"Failed to fetch message {msg_id}: {e}")
-                    continue
-
-            logger.info(f"Incremental sync: {len(new_message_ids)} new messages found")
+            # Fetch full details concurrently
+            logger.info(f"Incremental sync: {len(new_message_ids)} new messages, fetching concurrently...")
+            preview_data = self._fetch_messages_concurrent(list(new_message_ids))
             return preview_data, new_history_id
 
         except Exception as e:

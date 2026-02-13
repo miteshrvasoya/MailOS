@@ -23,4 +23,5 @@ export const AnalyticsCategories = {
   EMAILS: 'Emails',
   AI: 'AI',
   DASHBOARD: 'Dashboard',
+  FEATURES: 'Features',
 }
