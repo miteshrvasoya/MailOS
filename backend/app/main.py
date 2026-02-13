@@ -59,9 +59,17 @@ app = FastAPI(
 )
 
 # Add CORS middleware
+origins = []
+if settings.BACKEND_CORS_ORIGINS:
+    origins.extend(settings.BACKEND_CORS_ORIGINS)
+
+# Explicitly ensure production domain is allowed (guards against env var override)
+if "https://mail-os.vercel.app" not in origins:
+    origins.append("https://mail-os.vercel.app")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.BACKEND_CORS_ORIGINS,
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
