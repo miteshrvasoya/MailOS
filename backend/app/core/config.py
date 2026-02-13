@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     # OpenRouter / AI Settings
     OPENROUTER_API_KEY: Optional[str] = None
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
-    AI_MODEL: str = "meta-llama/llama-3.1-405b-instruct:free"
+    AI_MODEL: str = "arcee-ai/trinity-large-preview:free"
     
     # Gmail Integration
     GOOGLE_CLIENT_ID: Optional[str] = None

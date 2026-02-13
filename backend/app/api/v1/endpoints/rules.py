@@ -112,6 +112,171 @@ def create_rule(rule: Rule, db: Session = Depends(deps.get_db)):
     return rule
 
 
+# ─── Natural Language Rule Creation ───────────────────────────────
+
+class ParseTextRequest(BaseModel):
+    user_id: uuid.UUID
+    text: str  # e.g. "Filter LinkedIn connection requests into LinkedIn/Requests"
+
+
+class ParsedRulePreview(BaseModel):
+    name: str
+    description: str
+    conditions: dict
+    actions: dict
+    priority: int
+    explanation: str  # AI reasoning for how it parsed the text
+
+
+@router.post("/parse-text", response_model=ParsedRulePreview)
+def parse_text_to_rule(
+    req: ParseTextRequest,
+    db: Session = Depends(deps.get_db),
+):
+    """
+    Parse a natural language rule description into structured conditions/actions
+    using OpenRouter AI. Returns a preview for user approval.
+    """
+    import json
+    from app.core.ai import _call_openrouter, _save_log
+    from app.core.config import settings
+
+    system_message = """You are a rule parser for an email management system. 
+Convert the user's natural language rule into structured JSON matching this exact schema:
+
+{
+  "name": "Short descriptive rule name",
+  "description": "One-line description of what this rule does",
+  "conditions": {
+    "all": [
+      {"field": "sender|subject|category|body", "operator": "contains|equals|starts_with|ends_with", "value": "match value"}
+    ]
+  },
+  "actions": {
+    "move_to_category": "Category/SubCategory name (optional)",
+    "mark_important": true/false (optional),
+    "mark_read": true/false (optional),
+    "apply_label": "Label name to create/apply (optional)",
+    "stop_processing": true/false (optional)
+  },
+  "priority": 1-10 (higher = more important),
+  "explanation": "Brief explanation of how you interpreted the user's request"
+}
+
+Guidelines:
+- For LinkedIn emails, use sender contains "linkedin.com"
+- For connection requests, also check subject contains keywords like "invitation", "connect", "connection"
+- Create specific, useful label names using forward slash notation (e.g., "LinkedIn/Requests")
+- Only include actions that are relevant to the user's request
+- Set priority based on perceived importance (security=10, work=7, newsletters=3, etc.)
+
+Respond with ONLY valid JSON, nothing else."""
+
+    user_message = f"Convert this rule to structured format: \"{req.text}\""
+
+    messages = [
+        {"role": "system", "content": system_message},
+        {"role": "user", "content": user_message},
+    ]
+
+    try:
+        response_data = _call_openrouter(
+            messages=messages,
+            model=settings.AI_MODEL,
+            temperature=0,
+            response_format={"type": "json_object"},
+        )
+
+        choice = response_data["choices"][0]
+        content = choice["message"]["content"]
+        usage = response_data.get("usage", {})
+        latency_ms = response_data.get("_latency_ms", 0)
+
+        parsed = json.loads(content)
+
+        # Log the AI call
+        _save_log(
+            db=db,
+            user_id=req.user_id,
+            email_id=None,
+            model=response_data.get("model", settings.AI_MODEL),
+            messages=messages,
+            temperature=0,
+            response_content=content,
+            parsed_result=parsed,
+            finish_reason=choice.get("finish_reason"),
+            prompt_tokens=usage.get("prompt_tokens", 0),
+            completion_tokens=usage.get("completion_tokens", 0),
+            total_tokens=usage.get("total_tokens", 0),
+            cost=usage.get("cost", 0),
+            latency_ms=latency_ms,
+            status="success",
+            purpose="parse_rule_text",
+        )
+
+        return ParsedRulePreview(
+            name=parsed.get("name", "Untitled Rule"),
+            description=parsed.get("description", ""),
+            conditions=parsed.get("conditions", {"all": []}),
+            actions=parsed.get("actions", {}),
+            priority=parsed.get("priority", 5),
+            explanation=parsed.get("explanation", ""),
+        )
+
+    except Exception as e:
+        # Log error
+        _save_log(
+            db=db,
+            user_id=req.user_id,
+            email_id=None,
+            model=settings.AI_MODEL,
+            messages=messages,
+            temperature=0,
+            response_content=None,
+            parsed_result=None,
+            finish_reason=None,
+            prompt_tokens=0,
+            completion_tokens=0,
+            total_tokens=0,
+            cost=0,
+            latency_ms=0,
+            status="error",
+            purpose="parse_rule_text",
+            error=str(e),
+        )
+        raise HTTPException(status_code=500, detail=f"AI parsing failed: {str(e)}")
+
+
+class CreateFromParsedRequest(BaseModel):
+    user_id: uuid.UUID
+    name: str
+    description: str
+    conditions: dict
+    actions: dict
+    priority: int
+
+
+@router.post("/from-parsed", response_model=Rule)
+def create_from_parsed(
+    req: CreateFromParsedRequest,
+    db: Session = Depends(deps.get_db),
+):
+    """Create a rule from an AI-parsed preview (after user approval)."""
+    rule = Rule(
+        user_id=req.user_id,
+        name=req.name,
+        description=req.description,
+        priority=req.priority,
+        conditions=req.conditions,
+        actions=req.actions,
+        is_active=True,
+    )
+    db.add(rule)
+    db.commit()
+    db.refresh(rule)
+    return rule
+
+
 @router.get("/templates")
 def get_rule_templates():
     """Return the list of pre-built rule templates."""

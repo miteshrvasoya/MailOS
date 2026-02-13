@@ -9,4 +9,5 @@ from .google_credential import GoogleCredential
 from .category import Category
 from .snoozed_email import SnoozedEmail
 from .digest import Digest
+from .ai_log import AILog
 

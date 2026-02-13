@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { MailOpen, LayoutGrid, Inbox, Settings, FileText, BarChart3, MessageSquare, Sliders, User, Bell, Sparkles, Reply, AlarmClock } from 'lucide-react'
+import { MailOpen, LayoutGrid, Inbox, Settings, FileText, BarChart3, MessageSquare, Sliders, User, Bell, Sparkles, Reply, AlarmClock, Brain } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSession } from 'next-auth/react'
 
@@ -16,6 +16,7 @@ const navItems = [
   { label: 'Digests', href: '/dashboard/digests', icon: FileText },
   { label: 'Rules', href: '/dashboard/rules', icon: Sliders },
   { label: 'Insights', href: '/dashboard/insights', icon: BarChart3 },
+  { label: 'AI Logs', href: '/dashboard/ai-logs', icon: Brain },
   { label: 'Settings', href: '/dashboard/settings', icon: Settings },
   { label: 'Profile', href: '/dashboard/profile', icon: User },
   { label: 'Feedback', href: '/dashboard/feedback', icon: MessageSquare },

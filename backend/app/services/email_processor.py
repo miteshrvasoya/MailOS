@@ -33,11 +33,13 @@ def process_email_pipeline(
     5. Check Notifications
     """
     
-    # 1. AI Classification
+    # 1. AI Classification (with logging)
     ai_result = classify_email(
         email_data.get("subject", ""), 
         email_data.get("body", ""), 
-        email_data.get("sender", "")
+        email_data.get("sender", ""),
+        db=db,
+        user_id=user.id,
     )
     
     # Check if Insight already exists
