@@ -1,15 +1,35 @@
-import React from "react"
+import React, { Suspense } from "react"
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
-import dynamic from 'next/dynamic'
 import './globals.css'
 import { Providers } from '@/components/providers'
-
-const GoogleAnalytics = dynamic(() => import('@/components/google-analytics'), { ssr: false })
+import GoogleAnalytics from '@/components/google-analytics'
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
+
+// ... metadata ...
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode
+}>) {
+  return (
+    <html lang="en" className="dark">
+      <body className={`font-sans antialiased bg-background text-foreground`}>
+        <Providers>
+          {children}
+          <Analytics />
+        </Providers>
+        <Suspense fallback={null}>
+          <GoogleAnalytics GA_MEASUREMENT_ID={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || 'G-VC77YKHTSY'} />
+        </Suspense>
+      </body>
+    </html>
+  )
+}
 
 export const metadata: Metadata = {
   title: 'MailOS - Intelligent Inbox Management',
@@ -63,20 +83,4 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode
-}>) {
-  return (
-    <html lang="en" className="dark">
-      <body className={`font-sans antialiased bg-background text-foreground`}>
-        <Providers>
-          {children}
-          <Analytics />
-        </Providers>
-        <GoogleAnalytics GA_MEASUREMENT_ID={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || 'G-VC77YKHTSY'} />
-      </body>
-    </html>
-  )
-}
+
