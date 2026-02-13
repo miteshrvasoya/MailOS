@@ -2,14 +2,16 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   ArrowLeft, Mail, Clock, Tag, AlertTriangle, Brain,
   Reply, Eye, EyeOff, Loader2, User, Sparkles,
-  ChevronRight, Shield, MessageSquare
+  ChevronRight, Shield, MessageSquare, Archive, ExternalLink
 } from 'lucide-react'
 import api from '@/lib/api'
+import { trackEvent, AnalyticsCategories } from '@/lib/analytics'
 
 interface EmailInsight {
   id: string
@@ -66,7 +68,7 @@ function getCategoryColor(category: string) {
 function ImportanceBar({ score }: { score: number }) {
   const percentage = Math.round(score * 100)
   const barColor = score >= 0.7 ? 'bg-red-500' : score >= 0.4 ? 'bg-yellow-500' : 'bg-green-500'
-  
+
   return (
     <div className="space-y-1.5">
       <div className="flex justify-between text-sm">
@@ -122,6 +124,7 @@ export default function EmailDetailPage() {
   const params = useParams()
   const router = useRouter()
   const emailId = params.id as string
+  const { data: session } = useSession()
 
   const [email, setEmail] = useState<EmailInsight | null>(null)
   const [loading, setLoading] = useState(true)
@@ -148,6 +151,24 @@ export default function EmailDetailPage() {
 
     if (emailId) fetchEmail()
   }, [emailId])
+
+  const handleArchive = async () => {
+    if (!email) return
+    try {
+      await api.post(`/emails/${email.id}/archive`)
+      // Optionally, update UI or navigate away
+      router.push('/dashboard') // Go back to dashboard after archiving
+    } catch (err) {
+      console.error('Failed to archive email:', err)
+      alert('Failed to archive email. Please try again.')
+    }
+  }
+
+  const handleOpenInGmail = () => {
+    if (!email || !session?.user?.email) return
+    const gmailUrl = `https://mail.google.com/mail/u/${session.user.email}/#all/${email.gmail_message_id}`
+    window.open(gmailUrl, '_blank')
+  }
 
   // Loading state
   if (loading) {
@@ -257,6 +278,52 @@ export default function EmailDetailPage() {
               <p className="text-sm leading-relaxed whitespace-pre-wrap">{email.snippet}</p>
             </div>
           )}
+
+          {/* Action Buttons */}
+          <div className="flex flex-wrap gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                handleArchive()
+                trackEvent({
+                  action: 'email_archive',
+                  category: AnalyticsCategories.EMAILS,
+                  label: email.id
+                })
+              }}
+              className="hover:bg-orange-50 hover:text-orange-600 transition-colors"
+            >
+              <Archive className="w-4 h-4 mr-2" /> Archive
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                handleOpenInGmail()
+                trackEvent({
+                  action: 'email_open_in_gmail',
+                  category: AnalyticsCategories.EMAILS,
+                  label: email.id
+                })
+              }}
+              className="hover:bg-blue-50 hover:text-blue-600 transition-colors"
+            >
+              <ExternalLink className="w-4 h-4 mr-2" /> Open in Gmail
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => trackEvent({
+                action: 'email_reply',
+                category: AnalyticsCategories.EMAILS,
+                label: email.id
+              })}
+              className="hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+            >
+              <Reply className="w-4 h-4 mr-2" /> Reply
+            </Button>
+          </div>
 
           {/* Divider */}
           <div className="border-t border-border/50" />

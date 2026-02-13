@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { MailOpen, LayoutGrid, Inbox, Settings, FileText, BarChart3, MessageSquare, Sliders, User, Bell, Sparkles, Reply, AlarmClock, Brain } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSession } from 'next-auth/react'
+import { trackEvent, AnalyticsCategories } from '@/lib/analytics'
 
 const navItems = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
@@ -52,6 +53,11 @@ export function Sidebar() {
                   ? 'bg-secondary text-foreground'
                   : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
               )}
+              onClick={() => trackEvent({
+                action: 'navigate',
+                category: AnalyticsCategories.NAVIGATION,
+                label: item.label
+              })}
             >
               <Icon className="w-4 h-4" />
               {item.label}

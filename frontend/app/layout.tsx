@@ -5,6 +5,7 @@ import { Analytics } from '@vercel/analytics/next'
 import Script from 'next/script'
 import './globals.css'
 import { Providers } from '@/components/providers'
+import GoogleAnalytics from '@/components/google-analytics'
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
@@ -73,19 +74,7 @@ export default function RootLayout({
           {children}
           <Analytics />
         </Providers>
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-VC77YKHTSY"
-          strategy="afterInteractive"
-        />
-        <Script id="google-analytics" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-
-            gtag('config', 'G-VC77YKHTSY');
-          `}
-        </Script>
+        <GoogleAnalytics GA_MEASUREMENT_ID={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || 'G-VC77YKHTSY'} />
       </body>
     </html>
   )

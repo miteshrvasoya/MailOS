@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import api from '@/lib/api'
+import { trackEvent, AnalyticsCategories } from '@/lib/analytics'
 import { Button } from '@/components/ui/button'
 import {
   Plus, Settings2, Trash2, Zap, Shield, Mail,
@@ -144,6 +145,11 @@ export default function RulesPage() {
         title: "Rule deleted",
         description: `"${name}" has been removed.`,
       })
+      trackEvent({
+        action: 'delete_rule',
+        category: AnalyticsCategories.RULES,
+        label: name
+      })
     } catch (error) {
        console.error("Failed to delete rule", error)
        toast({
@@ -162,6 +168,11 @@ export default function RulesPage() {
       toast({
         title: !currentState ? "Rule activated" : "Rule paused",
         description: `Rule is now ${!currentState ? 'active' : 'paused'}.`,
+      })
+      trackEvent({
+        action: !currentState ? 'activate_rule' : 'pause_rule',
+        category: AnalyticsCategories.RULES,
+        label: id
       })
     } catch (error) {
       console.error("Failed to toggle rule", error)
@@ -193,6 +204,11 @@ export default function RulesPage() {
         title: "Template enabled!",
         description: `"${res.data.name}" rule is now active.`,
       })
+      trackEvent({
+        action: 'enable_template',
+        category: AnalyticsCategories.RULES,
+        label: templateId
+      })
     } catch (error) {
       console.error("Failed to create from template", error)
       toast({
@@ -216,6 +232,11 @@ export default function RulesPage() {
               text: nlInput
           })
           setParsedPreview(res.data)
+          trackEvent({
+            action: 'parse_rule_ai',
+            category: AnalyticsCategories.AI,
+            label: 'success'
+          })
       } catch (e) {
           console.error("Parsing failed", e)
           toast({
@@ -244,6 +265,11 @@ export default function RulesPage() {
           toast({
               title: "Rule Created",
               description: "Your new rule has been added and activated."
+          })
+          trackEvent({
+            action: 'create_rule_ai',
+            category: AnalyticsCategories.RULES,
+            label: parsedPreview.name
           })
       } catch (e) {
           console.error("Creation failed", e)

@@ -8,7 +8,7 @@ import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import api from '@/lib/api'
-import { trackEvent } from '@/lib/analytics'
+import { trackEvent, AnalyticsCategories } from '@/lib/analytics'
 import { useToast } from '@/components/ui/use-toast'
 
 interface EmailInsight {
@@ -75,7 +75,7 @@ export default function DashboardPage() {
       })
       
       try {
-          trackEvent({ action: 'scan_gmail', category: 'Dashboard', label: 'User initiated scan' })
+          trackEvent({ action: 'scan_gmail', category: AnalyticsCategories.DASHBOARD, label: 'manual_scan' })
           await api.post('/gmail/sync', { 
             user_id: session.user.id,
             mode: 'full'
@@ -129,7 +129,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-semibold text-foreground">Important Emails</h2>
             <Button variant="ghost" asChild className="text-primary hover:text-primary/80 hover:bg-transparent">
-              <Link href="/dashboard/groups" className="flex items-center gap-2">
+              <Link href="/dashboard/groups" className="flex items-center gap-2" onClick={() => trackEvent({ action: 'view_all_important', category: AnalyticsCategories.DASHBOARD })}>
                 View all <ArrowRight className="w-4 h-4" />
               </Link>
             </Button>
@@ -149,7 +149,7 @@ export default function DashboardPage() {
                       </p>
                     </div>
                     <div className="flex gap-2 flex-shrink-0">
-                      <Button asChild size="sm" className="bg-primary hover:bg-primary/90 text-background font-medium cta-button">
+                      <Button asChild size="sm" className="bg-primary hover:bg-primary/90 text-background font-medium cta-button" onClick={() => trackEvent({ action: 'view_email_details', category: AnalyticsCategories.DASHBOARD, label: email.id })}>
                         <Link href={`/dashboard/emails/${email.id}`}>View Details</Link>
                       </Button>
                     </div>
@@ -208,7 +208,7 @@ export default function DashboardPage() {
             <h2 className="text-2xl font-semibold mb-6 text-foreground">Quick Actions</h2>
             <div className="grid md:grid-cols-3 gap-4">
               <Button asChild className="h-auto py-5 px-6 bg-secondary/40 hover:bg-secondary text-foreground border border-border/50 hover:border-border font-semibold cta-button rounded-lg justify-start">
-                <Link href="/dashboard/digests" className="flex flex-col items-start gap-1.5">
+                <Link href="/dashboard/digests" className="flex flex-col items-start gap-1.5" onClick={() => trackEvent({ action: 'quick_action_digest', category: AnalyticsCategories.DASHBOARD })}>
                   <span className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-primary" />
                     Create Custom Digest
@@ -217,7 +217,7 @@ export default function DashboardPage() {
                 </Link>
               </Button>
               <Button asChild className="h-auto py-5 px-6 bg-secondary/40 hover:bg-secondary text-foreground border border-border/50 hover:border-border font-semibold cta-button rounded-lg justify-start">
-                <Link href="/dashboard/rules" className="flex flex-col items-start gap-1.5">
+                <Link href="/dashboard/rules" className="flex flex-col items-start gap-1.5" onClick={() => trackEvent({ action: 'quick_action_rule', category: AnalyticsCategories.DASHBOARD })}>
                   <span className="flex items-center gap-2">
                     <Zap className="w-4 h-4 text-primary" />
                     Add a Rule
@@ -226,7 +226,7 @@ export default function DashboardPage() {
                 </Link>
               </Button>
               <Button asChild className="h-auto py-5 px-6 bg-secondary/40 hover:bg-secondary text-foreground border border-border/50 hover:border-border font-semibold cta-button rounded-lg justify-start">
-                <Link href="/dashboard/settings" className="flex flex-col items-start gap-1.5">
+                <Link href="/dashboard/settings" className="flex flex-col items-start gap-1.5" onClick={() => trackEvent({ action: 'quick_action_settings', category: AnalyticsCategories.DASHBOARD })}>
                   <span className="flex items-center gap-2">
                     <Mail className="w-4 h-4 text-primary" />
                     Adjust Settings
