@@ -2,10 +2,11 @@ import React from "react"
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
-import Script from 'next/script'
+import dynamic from 'next/dynamic'
 import './globals.css'
 import { Providers } from '@/components/providers'
-import GoogleAnalytics from '@/components/google-analytics'
+
+const GoogleAnalytics = dynamic(() => import('@/components/google-analytics'), { ssr: false })
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
