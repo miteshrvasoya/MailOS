@@ -272,6 +272,17 @@ def _process_single_with_classification(
             select(EmailInsight).where(EmailInsight.gmail_message_id == gmail_msg_id)
         ).first()
 
+    # Prepare tags from AI result
+    category = ai_result.get("category", "Uncategorized")
+    subcategory = ai_result.get("subcategory")
+    intent = ai_result.get("intent")
+    
+    tags = [f"AI:{category}"]
+    if subcategory:
+        tags.append(f"Sub:{subcategory}")
+    if intent:
+        tags.append(f"Intent:{intent}")
+
     if not insight:
         insight = EmailInsight(
             user_id=user.id,
@@ -281,24 +292,24 @@ def _process_single_with_classification(
             subject=email_data.get("subject"),
             sent_at=email_data.get("sent_at", datetime.utcnow()),
             snippet=email_data.get("body", "")[:200],
-            category=ai_result.get("category", "Uncategorized"),
-            intent=ai_result.get("intent"),
+            category=category,
+            intent=intent,
             importance_score=ai_result.get("importance_score", 0),
             urgency=ai_result.get("urgency", "low"),
             needs_reply=ai_result.get("needs_reply", False),
             explanation=ai_result.get("explanation"),
-            classification_tags=[ai_result.get("category")] if ai_result.get("category") else [],
+            classification_tags=tags,
             is_preview=is_preview,
         )
         db.add(insight)
     else:
-        insight.category = ai_result.get("category", insight.category)
-        insight.intent = ai_result.get("intent", insight.intent)
+        insight.category = category
+        insight.intent = intent
         insight.importance_score = ai_result.get("importance_score", insight.importance_score)
         insight.urgency = ai_result.get("urgency", insight.urgency)
         insight.needs_reply = ai_result.get("needs_reply", insight.needs_reply)
         insight.explanation = ai_result.get("explanation", insight.explanation)
-        insight.classification_tags = [ai_result.get("category")] if ai_result.get("category") else []
+        insight.classification_tags = tags
         insight.is_preview = is_preview
         db.add(insight)
 
@@ -313,11 +324,24 @@ def _process_single_with_classification(
     if "move_to_category" in rule_overrides:
         assigned_group = rule_overrides["move_to_category"]
         insight.classification_tags.append(f"Rule:{assigned_group}")
+    
+    # Handle Rule-based Subcategory & Intent overrides
+    if "set_subcategory" in rule_overrides:
+        sub = rule_overrides["set_subcategory"]
+        insight.classification_tags.append(f"Sub:{sub}")
+        
+    if "set_intent" in rule_overrides:
+        new_intent = rule_overrides["set_intent"]
+        insight.intent = new_intent
+        insight.classification_tags.append(f"Intent:{new_intent}")
+
     if "mark_important" in rule_overrides and rule_overrides["mark_important"]:
         insight.importance_score = 100
         insight.urgency = "high"
+        
     if insight.category and f"AI:{insight.category}" not in insight.classification_tags:
         insight.classification_tags.append(f"AI:{insight.category}")
+        
     insight.category = assigned_group
 
     db.commit()
