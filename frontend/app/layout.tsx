@@ -5,6 +5,7 @@ import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import { Providers } from '@/components/providers'
 import GoogleAnalytics from '@/components/google-analytics'
+import { UTMTracker } from '@/components/utm-tracker'
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
@@ -20,6 +21,7 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className={`font-sans antialiased bg-background text-foreground`}>
         <Providers>
+          <UTMTracker />
           {children}
           <Analytics />
         </Providers>
