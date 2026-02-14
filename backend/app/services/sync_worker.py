@@ -22,6 +22,10 @@ def sync_user_emails(user: User, db: Session) -> dict:
     Sync emails for a single user. Uses incremental sync when possible.
     Returns a summary dict.
     """
+    from app.services.sync_manager import sync_manager
+    
+    sync_manager.start_sync(user.id, type="background")
+    
     try:
         service = GmailService(user, db)
         raw_emails = []
@@ -50,6 +54,9 @@ def sync_user_emails(user: User, db: Session) -> dict:
             except Exception as e:
                 logger.warning(f"Failed to get historyId for user {user.id}: {e}")
 
+        # Update total
+        sync_manager.set_total(user.id, len(raw_emails))
+
         # Process through batch pipeline
         batch_results = process_emails_batch(
             db, user, raw_emails, is_preview=False, gmail_service=service
@@ -63,6 +70,8 @@ def sync_user_emails(user: User, db: Session) -> dict:
         db.add(user)
         db.commit()
 
+        sync_manager.finish_sync(user.id, status="completed", message=f"Synced {processed} emails")
+
         return {
             "user_id": str(user.id),
             "sync_type": sync_type,
@@ -72,6 +81,7 @@ def sync_user_emails(user: User, db: Session) -> dict:
 
     except Exception as e:
         logger.error(f"Background sync failed for user {user.id}: {e}")
+        sync_manager.finish_sync(user.id, status="error", message=str(e))
         return {
             "user_id": str(user.id),
             "error": str(e),

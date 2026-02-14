@@ -52,79 +52,108 @@ class SyncRequest(BaseModel):
     mode: str = "preview" # preview | full
     force_full: bool = False  # Force full sync even if incremental is available
 
+from fastapi import BackgroundTasks
+
+@router.get("/sync/status/{user_id}")
+def get_sync_status(user_id: uuid.UUID):
+    from app.services.sync_manager import sync_manager
+    return sync_manager.get_status(user_id)
+
 @router.post("/sync")
-def sync_gmail(req: SyncRequest, db: Session = Depends(deps.get_db)):
+def sync_gmail(
+    req: SyncRequest, 
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(deps.get_db)
+):
+    from app.services.sync_manager import sync_manager
+    
     user = db.get(User, req.user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
         
-    logger.info(f"Starting Gmail sync for user {user.id} (mode: {req.mode})")
+    current_status = sync_manager.get_status(req.user_id)
+    if current_status.get("status") == "running":
+        return {"status": "running", "message": "Sync already in progress"}
+        
+    logger.info(f"Initiating background sync for user {user.id}")
     
-    try:
-        service = GmailService(user, db)
-        raw_emails = []
-        new_history_id = None
-        sync_type = "full"  # Track sync type for response
-        
-        # Attempt incremental sync if we have a history ID and not forcing full sync
-        if user.last_history_id and not req.force_full:
-            try:
-                raw_emails, new_history_id = service.fetch_new_emails(user.last_history_id)
-                sync_type = "incremental"
-                logger.info(f"Incremental sync: {len(raw_emails)} new emails for user {user.id}")
-            except HistoryExpiredError:
-                logger.warning(f"History expired for user {user.id}, falling back to full sync")
-                raw_emails = []  # Will trigger full sync below
-                
-        # Full sync: first time or fallback
-        if not raw_emails and sync_type == "full" or (sync_type == "incremental" and not raw_emails and not new_history_id):
-            raw_emails = service.fetch_preview_emails(limit=req.limit)
-            sync_type = "full"
-            logger.info(f"Full sync: fetched {len(raw_emails)} emails for user {user.id}")
-        
-        # Always capture the latest history ID
-        if not new_history_id:
-            try:
-                profile = service.get_profile()
-                new_history_id = profile.get('historyId')
-            except Exception as e:
-                logger.warning(f"Failed to fetch profile for historyId: {e}")
-        
-        # Process emails through batch pipeline
-        start_time = time.time()
-        batch_results = process_emails_batch(
-            db, user, raw_emails, is_preview=(req.mode == "preview"), gmail_service=service
-        )
-        processing_time = round(time.time() - start_time, 2)
-        results = [r.insight for r in batch_results]
-                
-        # Update user's sync state
-        if new_history_id:
-            user.last_history_id = new_history_id
-        user.last_sync_at = datetime.now(timezone.utc)
-        db.add(user)
-        db.commit()
-        
-        # Aggregate stats
-        categories = {}
-        for r in results:
-            cat = r.category
-            categories[cat] = categories.get(cat, 0) + 1
-            
-        logger.info(f"Sync complete for user {user.id}. Type: {sync_type}, Processed: {len(results)}")
+    # Initialize Sync State
+    sync_manager.start_sync(req.user_id, type=req.mode)
+    
+    # Add background task
+    background_tasks.add_task(_run_sync_task, req.user_id, req.limit, req.mode, req.force_full)
+    
+    return {"status": "started", "message": "Sync started in background"}
 
-        return {
-            "count": len(results),
-            "sync_type": sync_type,
-            "processing_time_seconds": processing_time,
-            "groups": [{"name": k, "count": v} for k, v in categories.items()],
-            "preview_items": [
-                {"subject": r.subject, "category": r.category, "confidence": r.importance_score} 
-                for r in results[:5]
-            ],
-            "last_sync_at": user.last_sync_at.isoformat() if user.last_sync_at else None
-        }
+
+def _run_sync_task(user_id: uuid.UUID, limit: int, mode: str, force_full: bool):
+    """
+    Background task to sync Gmail.
+    Creates its own DB session.
+    """
+    from app.db.session import engine
+    from app.services.sync_manager import sync_manager
+    
+    logger.info(f"Starting background sync task for user {user_id}")
+    
+    with Session(engine) as db:
+        user = db.get(User, user_id)
+        if not user:
+            logger.error(f"User {user_id} not found in background task")
+            sync_manager.finish_sync(user_id, status="error", message="User not found")
+            return
+
+        try:
+            service = GmailService(user, db)
+            raw_emails = []
+            new_history_id = None
+            sync_type = "full"
             
-    except Exception as e:
-        logger.error(f"Gmail Sync Error for user {user.id}: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
+            # Attempt incremental sync
+            if user.last_history_id and not force_full:
+                try:
+                    raw_emails, new_history_id = service.fetch_new_emails(user.last_history_id)
+                    sync_type = "incremental"
+                    logger.info(f"Incremental sync: {len(raw_emails)} new emails")
+                    sync_manager.update_progress(user_id, 0, message=f"Fetched {len(raw_emails)} new emails")
+                except HistoryExpiredError:
+                    logger.warning("History expired, fallback to full sync")
+                    raw_emails = []
+            
+            # Full sync fallback
+            if not raw_emails and sync_type == "full" or (sync_type == "incremental" and not raw_emails and not new_history_id):
+                raw_emails = service.fetch_preview_emails(limit=limit)
+                sync_type = "full"
+                logger.info(f"Full sync: fetched {len(raw_emails)} emails")
+                sync_manager.update_progress(user_id, 0, message=f"Fetched {len(raw_emails)} emails")
+
+            # Get latest historyId
+            if not new_history_id:
+                try:
+                    profile = service.get_profile()
+                    new_history_id = profile.get('historyId')
+                except Exception as e:
+                    logger.warning(f"Failed to fetch profile: {e}")
+
+            # Update total in manager for progress bar
+            sync_manager.set_total(user_id, len(raw_emails))
+
+            # Process
+            process_emails_batch(
+                db, user, raw_emails, is_preview=(mode == "preview"), gmail_service=service
+            )
+            
+            # Update user state
+            if new_history_id:
+                user.last_history_id = new_history_id
+            user.last_sync_at = datetime.now(timezone.utc)
+            db.add(user)
+            db.commit()
+            
+            count = len(raw_emails)
+            sync_manager.finish_sync(user_id, status="completed", message=f"Synced {count} emails")
+            logger.info(f"Background sync complete for {user_id}")
+            
+        except Exception as e:
+            logger.error(f"Sync failed for {user_id}: {e}")
+            sync_manager.finish_sync(user_id, status="error", message=str(e))

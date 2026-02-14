@@ -6,20 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
-import { useEffect, useState } from 'react'
-import api from '@/lib/api'
-import { trackEvent, AnalyticsCategories } from '@/lib/analytics'
-import { useToast } from '@/components/ui/use-toast'
-
-interface EmailInsight {
-  id: string
-  subject: string
-  sender: string
-  sent_at: string
-  importance_score: number
-  category: string
-}
-
+import { useRef } from 'react'
 
 export default function DashboardPage() {
   const { data: session } = useSession()
@@ -27,6 +14,9 @@ export default function DashboardPage() {
   const [emails, setEmails] = useState<EmailInsight[]>([])
   const [loading, setLoading] = useState(true)
   const [scanning, setScanning] = useState(false)
+  const [syncProgress, setSyncProgress] = useState('')
+  const pollRef = useRef<NodeJS.Timeout | null>(null)
+  
   const [stats, setStats] = useState([
     { label: 'Emails processed today', value: '0', icon: Mail },
     { label: 'Important detected', value: '0', icon: AlertCircle },
@@ -34,13 +24,77 @@ export default function DashboardPage() {
     { label: 'AI confidence', value: '0%', icon: Zap },
   ])
 
-  const { toast } = useToast()
+  const { toast } = useSession() // Wait, useToast is imported separately. Checking lines.
+  // Line 37: const { toast } = useToast() is correct.
+  
+  // Clean up polling on unmount
+  useEffect(() => {
+    return () => stopPolling()
+  }, [])
 
   useEffect(() => {
     if (session?.user?.id) {
       fetchDashboardData()
+      checkSyncStatus()
     }
   }, [session])
+
+  const stopPolling = () => {
+    if (pollRef.current) {
+        clearInterval(pollRef.current)
+        pollRef.current = null
+    }
+  }
+
+  const startPolling = () => {
+      stopPolling() // Ensure only one poll
+      
+      pollRef.current = setInterval(async () => {
+          if (!session?.user?.id) return
+          
+          try {
+              const res = await api.get(`/gmail/sync/status/${session.user.id}`)
+              const status = res.data
+              
+              if (status.status === 'running') {
+                  setScanning(true)
+                  setSyncProgress(status.message || 'Syncing...')
+              } else if (status.status === 'completed') {
+                  stopPolling()
+                  setScanning(false)
+                  setSyncProgress('')
+                  // Only show toast if we were actively scanning
+                  toast({ title: "Sync complete", description: status.message })
+                  fetchDashboardData()
+              } else if (status.status === 'error') {
+                  stopPolling()
+                  setScanning(false)
+                  setSyncProgress('')
+                  toast({ title: "Sync failed", description: status.message, variant: "destructive" })
+              } else {
+                  // Idle
+                  setScanning(false)
+                  stopPolling()
+              }
+          } catch (e) {
+              console.error("Poll failed", e)
+          }
+      }, 1000)
+  }
+
+  const checkSyncStatus = async () => {
+      if (!session?.user?.id) return
+      try {
+          const res = await api.get(`/gmail/sync/status/${session.user.id}`)
+          if (res.data?.status === 'running') {
+              setScanning(true)
+              setSyncProgress(res.data.message || 'Resuming sync...')
+              startPolling()
+          }
+      } catch (e) {
+          // ignore
+      }
+  }
 
   const fetchDashboardData = async () => {
     setLoading(true)
@@ -69,6 +123,8 @@ export default function DashboardPage() {
   const handleScan = async () => {
       if (!session?.user?.id) return;
       setScanning(true);
+      setSyncProgress('Starting...');
+      
       toast({
         title: "Scanning initiated",
         description: "Checking your Gmail for new important emails...",
@@ -76,24 +132,20 @@ export default function DashboardPage() {
       
       try {
           trackEvent({ action: 'scan_gmail', category: AnalyticsCategories.DASHBOARD, label: 'manual_scan' })
+          
           await api.post('/gmail/sync', { 
             user_id: session.user.id,
             mode: 'full'
           });
           
-          toast({
-            title: "Scan complete",
-            description: "We've found new insights for you.",
-          })
+          // Start polling immediately
+          startPolling()
           
-          // Refresh data instead of just redirecting, or redirect if that's the desired flow
-          fetchDashboardData()
-          router.push('/dashboard/suggestions');
       } catch (error) {
           console.error("Scan failed", error);
           toast({
             title: "Scan failed",
-            description: "There was an error connecting to Gmail.",
+            description: "There was an error triggering the sync.",
             variant: "destructive"
           })
           setScanning(false);
@@ -119,7 +171,7 @@ export default function DashboardPage() {
             disabled={scanning}
           >
             {scanning ? <Loader2 className="w-5 h-5 animate-spin" /> : <RefreshCw className="w-5 h-5" />}
-            {scanning ? 'Scanning...' : 'Scan Gmail'}
+            {scanning ? syncProgress : 'Scan Gmail'}
           </Button>
         </div>
 

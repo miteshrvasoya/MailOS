@@ -150,9 +150,115 @@ Body: {clean_data['body']}"""
             response_format={"type": "json_object"},
         )
 
-        # ... (rest of function) ...
+        # Extract response
+        choice = response_data["choices"][0]
+        content = choice["message"]["content"]
+        finish_reason = choice.get("finish_reason", "unknown")
+        usage = response_data.get("usage", {})
+        latency_ms = response_data.get("_latency_ms", 0)
 
-# ... (inside classify_emails_batch) ...
+        # Parse the AI response
+        parsed = json.loads(content)
+
+        print(f"AI Response (model={response_data.get('model', model)}, "
+              f"tokens={usage.get('total_tokens', 0)}, "
+              f"latency={latency_ms}ms): {parsed.get('category')} / {parsed.get('intent')}")
+
+        # Log to database
+        if db:
+            _save_log(
+                db=db,
+                user_id=user_id,
+                email_id=email_id,
+                model=response_data.get("model", model),
+                messages=messages,
+                temperature=0,
+                response_content=content,
+                parsed_result=parsed,
+                finish_reason=finish_reason,
+                prompt_tokens=usage.get("prompt_tokens", 0),
+                completion_tokens=usage.get("completion_tokens", 0),
+                total_tokens=usage.get("total_tokens", 0),
+                cost=usage.get("cost", 0),
+                latency_ms=latency_ms,
+                status="success",
+                purpose="classify_email",
+            )
+
+        return parsed
+
+    except Exception as e:
+        print(f"AI Classification failed: {e}")
+
+        # Log error
+        if db:
+            _save_log(
+                db=db,
+                user_id=user_id,
+                email_id=email_id,
+                model=model,
+                messages=messages,
+                temperature=0,
+                response_content=None,
+                parsed_result=None,
+                finish_reason=None,
+                prompt_tokens=0,
+                completion_tokens=0,
+                total_tokens=0,
+                cost=0,
+                latency_ms=0,
+                status="error",
+                purpose="classify_email",
+                error=str(e),
+            )
+
+        return {
+            "category": "Uncategorized",
+            "intent": "error",
+            "importance_score": 0.0,
+            "needs_reply": False,
+            "urgency": "low",
+            "explanation": f"AI Processing Error: {str(e)}"
+        }
+
+
+# ─── Batch AI Classification ────────────────────────────────────
+
+def classify_emails_batch(
+    emails: list[Dict[str, str]],
+    db=None,
+    user_id: Optional[uuid.UUID] = None,
+) -> list[Dict[str, Any]]:
+    """
+    Classify multiple emails in a single API call.
+    Each email in the list should have: subject, body, sender.
+    Returns a list of classification dicts in the same order.
+    Falls back to individual classification on failure.
+    """
+    if not emails:
+        return []
+
+    # If only 1 email, use the single classifier
+    if len(emails) == 1:
+        e = emails[0]
+        return [classify_email(e.get("subject", ""), e.get("body", ""), e.get("sender", ""), db=db, user_id=user_id)]
+
+    print(f"Batch Classification (REST API) — {len(emails)} emails ---")
+
+    # Preprocess all emails
+    cleaned = [preprocess_email(e.get("subject", ""), e.get("body", ""), e.get("sender", "")) for e in emails]
+
+    # Build the batch prompt
+    email_blocks = []
+    for i, c in enumerate(cleaned):
+        email_blocks.append(
+            f"--- Email {i+1} ---\n"
+            f"Sender: {c['sender']}\n"
+            f"Subject: {c['subject']}\n"
+            f"Body: {c['body']}"
+        )
+
+    joined = "\n\n".join(email_blocks)
 
     system_message = "You are an email classification assistant. Respond ONLY with a valid JSON array."
     user_message = f"""Classify these {len(emails)} emails using this taxonomy:

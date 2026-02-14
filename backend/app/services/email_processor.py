@@ -234,6 +234,8 @@ def process_emails_batch(
         all_ai_results.extend(chunk_results)
 
     # 3. Process each email with its classification
+    from app.services.sync_manager import sync_manager
+    
     results = []
     for email_data, ai_result in zip(new_emails, all_ai_results):
         try:
@@ -241,6 +243,10 @@ def process_emails_batch(
                 db, user, email_data, ai_result, is_preview, gmail_service
             )
             results.append(result)
+            
+            # Update Progress
+            sync_manager.update_progress(user.id)
+            
         except Exception as e:
             import logging
             logging.getLogger(__name__).debug(
