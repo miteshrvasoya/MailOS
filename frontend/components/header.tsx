@@ -70,6 +70,9 @@ export function Header() {
           <Link href="/security" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200">
             Security
           </Link>
+          <Link href="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200">
+            Privacy
+          </Link>
         </nav>
         
         {!isLoggedIn && status !== 'loading' && (
