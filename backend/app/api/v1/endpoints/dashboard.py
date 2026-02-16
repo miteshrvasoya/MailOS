@@ -4,6 +4,7 @@ from app.api import deps
 from app.models.email import EmailInsight
 from app.models.rule import Rule
 from app.models.user import User
+import uuid
 
 router = APIRouter()
 
