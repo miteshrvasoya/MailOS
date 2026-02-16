@@ -1,5 +1,5 @@
 import React, { Suspense } from "react"
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
@@ -37,12 +37,7 @@ export const metadata: Metadata = {
   title: 'MailOS - Intelligent Inbox Management',
   description: 'AI that understands your emails, prioritizes what matters, and sends you daily clarity.',
   generator: 'v0.app',
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-  },
+
   icons: {
     icon: [
       {
@@ -83,6 +78,13 @@ export const metadata: Metadata = {
     creator: '@mailos_precizn',
     images: ['https://pub-2a4eb4e23d7d4d18bc7ca5d587d38902.r2.dev/landing-page.png'],
   },
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 }
 
 

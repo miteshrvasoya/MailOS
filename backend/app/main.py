@@ -66,6 +66,8 @@ if settings.BACKEND_CORS_ORIGINS:
 # Explicitly ensure production domain is allowed (guards against env var override)
 if "https://mail-os.vercel.app" not in origins:
     origins.append("https://mail-os.vercel.app")
+if "http://localhost:3000" not in origins:
+    origins.append("http://localhost:3000")
 
 app.add_middleware(
     CORSMiddleware,

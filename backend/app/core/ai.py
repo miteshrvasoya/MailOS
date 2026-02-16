@@ -127,7 +127,15 @@ Output JSON Schema:
   "importance_score": 0-100 (float),
   "needs_reply": boolean,
   "urgency": "low" | "medium" | "high",
-  "explanation": "Short reason"
+  "explanation": "Short reason",
+  "tasks": [
+    {
+        "title": "Actionable task title",
+        "priority": "high/medium/low",
+        "due_date": "YYYY-MM-DD or null",
+        "status": "pending"
+    }
+  ]
 }}
 
 Email:
@@ -276,7 +284,8 @@ Return a JSON array with exactly {len(emails)} objects. Schema:
   "importance_score": 0-100,
   "needs_reply": boolean,
   "urgency": "low" | "medium" | "high",
-  "explanation": "Short reason"
+  "explanation": "Short reason",
+  "tasks": [{ "title": "string", "priority": "medium", "due_date": "YYYY-MM-DD" }]
 }}
 
 Emails:

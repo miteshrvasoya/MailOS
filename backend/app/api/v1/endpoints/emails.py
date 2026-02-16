@@ -4,15 +4,18 @@ from sqlmodel import Session, select
 from app.api import deps
 from app.models.email import EmailInsight
 
+import uuid
+
 router = APIRouter()
 
 @router.get("/", response_model=List[EmailInsight])
 def read_emails(
+    user_id: uuid.UUID,
     skip: int = 0, 
     limit: int = 100, 
     db: Session = Depends(deps.get_db)
 ):
-    emails = db.exec(select(EmailInsight).offset(skip).limit(limit)).all()
+    emails = db.exec(select(EmailInsight).where(EmailInsight.user_id == user_id).offset(skip).limit(limit)).all()
     return emails
 
 @router.post("/", response_model=EmailInsight)

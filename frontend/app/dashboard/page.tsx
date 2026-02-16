@@ -6,7 +6,10 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
-import { useRef } from 'react'
+import { useRef, useState, useEffect } from 'react'
+import api, { EmailInsight } from '@/lib/api'
+import { trackEvent, AnalyticsCategories } from '@/lib/analytics'
+import { useToast } from '@/components/ui/use-toast'
 
 export default function DashboardPage() {
   const { data: session } = useSession()
@@ -24,7 +27,7 @@ export default function DashboardPage() {
     { label: 'AI confidence', value: '0%', icon: Zap },
   ])
 
-  const { toast } = useSession() // Wait, useToast is imported separately. Checking lines.
+  const { toast } = useToast()
   // Line 37: const { toast } = useToast() is correct.
   
   // Clean up polling on unmount
@@ -100,8 +103,8 @@ export default function DashboardPage() {
     setLoading(true)
     try {
       const [statsRes, emailsRes] = await Promise.all([
-        api.get('/dashboard/stats'),
-        api.get('/emails?limit=5')
+        api.get('/dashboard/stats', { params: { user_id: session?.user?.id } }),
+        api.get('/emails', { params: { limit: 5, user_id: session?.user?.id } })
       ])
       
       const s = statsRes.data

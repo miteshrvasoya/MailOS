@@ -6,6 +6,7 @@ from sqlmodel import Field, SQLModel, Relationship, JSON
 if TYPE_CHECKING:
     from .user import User
     from .action import EmailAction
+    from .task import Task
 
 
 class EmailInsight(SQLModel, table=True):
@@ -42,4 +43,5 @@ class EmailInsight(SQLModel, table=True):
     # Relationships
     user: "User" = Relationship(back_populates="email_insights")
     action: Optional["EmailAction"] = Relationship(back_populates="email", sa_relationship_kwargs={"uselist": False})
+    tasks: List["Task"] = Relationship(back_populates="email")
 

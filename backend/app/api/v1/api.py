@@ -1,5 +1,9 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import users, emails, rules, dashboard, notifications, feedback, actions, onboarding, gmail, categories, follow_ups, snooze, digests, ai_logs
+from app.api.v1.endpoints import (
+    users, emails, rules, dashboard, notifications, 
+    feedback, actions, onboarding, gmail, categories, 
+    follow_ups, snooze, digests, ai_logs, tasks
+)
 
 api_router = APIRouter()
 api_router.include_router(users.router, prefix="/users", tags=["users"])
@@ -16,4 +20,5 @@ api_router.include_router(follow_ups.router, prefix="/follow-ups", tags=["follow
 api_router.include_router(snooze.router, prefix="/snooze", tags=["snooze"])
 api_router.include_router(digests.router, prefix="/digests", tags=["digests"])
 api_router.include_router(ai_logs.router, prefix="/ai-logs", tags=["ai-logs"])
+api_router.include_router(tasks.router, prefix="/tasks", tags=["tasks"])
 

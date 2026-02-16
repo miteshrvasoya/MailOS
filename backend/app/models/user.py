@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from .category import Category
     from .snoozed_email import SnoozedEmail
     from .digest import Digest
+    from .task import Task
 
 
 
@@ -50,5 +51,6 @@ class User(SQLModel, table=True):
     categories: List["Category"] = Relationship(back_populates="user")
     snoozed_emails: List["SnoozedEmail"] = Relationship(back_populates="user")
     digests: List["Digest"] = Relationship(back_populates="user")
+    tasks: List["Task"] = Relationship(back_populates="user")
 
 

@@ -39,13 +39,13 @@ def get_pending_actions(db: Session = Depends(deps.get_db)):
 
 
 @router.get("/pending-list", response_model=List[ActionResponse])
-def get_pending_actions_list(db: Session = Depends(deps.get_db)):
+def get_pending_actions_list(user_id: uuid.UUID, db: Session = Depends(deps.get_db)):
     """Fetch pending AI suggestions with email data."""
-    return _get_pending_list(db)
+    return _get_pending_list(db, user_id)
 
 
-def _get_pending_list(db: Session) -> List[ActionResponse]:
-    statement = select(EmailAction, EmailInsight).join(EmailInsight).where(EmailAction.status == "pending")
+def _get_pending_list(db: Session, user_id: uuid.UUID) -> List[ActionResponse]:
+    statement = select(EmailAction, EmailInsight).join(EmailInsight).where(EmailAction.status == "pending", EmailAction.user_id == user_id)
     results = db.exec(statement).all()
 
     response = []

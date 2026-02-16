@@ -3,6 +3,7 @@ from app.models.email import EmailInsight
 from app.models.user import User
 from app.models.action import EmailAction
 from app.models.notification import Notification, NotificationCategory, NotificationPriority
+from app.models.task import Task
 from app.core.ai import classify_email
 from app.services.grouping import assign_group
 from app.services.rule_engine import RuleEngine
@@ -177,7 +178,24 @@ def process_email_pipeline(
         )
         db.add(notif)
         db.commit()
-        
+
+    # 6. Task Extraction
+    extracted_tasks = ai_result.get("tasks", [])
+    if extracted_tasks and isinstance(extracted_tasks, list):
+        for t_data in extracted_tasks:
+            if not isinstance(t_data, dict) or not t_data.get("title"):
+                continue
+            task = Task(
+                user_id=user.id,
+                email_id=insight.id,
+                title=t_data.get("title"),
+                priority=t_data.get("priority", "medium"),
+                status="pending",
+                # due_date parsing omitted for simplicity, can add dateparser later
+            )
+            db.add(task)
+        db.commit()
+    
     return EmailProcessingResult(insight, action, notif)
 
 
@@ -400,6 +418,22 @@ def _process_single_with_classification(
             action_url=f"/dashboard/emails/{insight.id}",
         )
         db.add(notif)
+        db.commit()
+
+    # Tasks
+    extracted_tasks = ai_result.get("tasks", [])
+    if extracted_tasks and isinstance(extracted_tasks, list):
+        for t_data in extracted_tasks:
+            if not isinstance(t_data, dict) or not t_data.get("title"):
+                continue
+            task = Task(
+                user_id=user.id,
+                email_id=insight.id,
+                title=t_data.get("title"),
+                priority=t_data.get("priority", "medium"),
+                status="pending"
+            )
+            db.add(task)
         db.commit()
 
     return EmailProcessingResult(insight, action, notif)
