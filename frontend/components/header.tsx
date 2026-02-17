@@ -61,7 +61,7 @@ export function Header() {
           </Link>
         </nav>
         
-        {!isLoggedIn && status !== 'loading' && (
+        {!isLoggedIn && !isLoading && (
           <div className="flex items-center gap-3">
             <Button variant="glow" onClick={handleLogin} className="hidden sm:inline-flex">
               Login / Sign Up
