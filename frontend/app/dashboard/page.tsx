@@ -5,14 +5,14 @@ import { Loader2, RefreshCw, Mail, TrendingUp, Zap, AlertCircle, ArrowRight, Che
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import Link from 'next/link'
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
 import { useRef, useState, useEffect } from 'react'
 import api, { EmailInsight } from '@/lib/api'
 import { trackEvent, AnalyticsCategories } from '@/lib/analytics'
 import { useToast } from '@/components/ui/use-toast'
 
 export default function DashboardPage() {
-  const { data: session } = useSession()
+  const { user, userId } = useAuth()
   const router = useRouter()
   const [emails, setEmails] = useState<EmailInsight[]>([])
   const [loading, setLoading] = useState(true)
@@ -36,11 +36,11 @@ export default function DashboardPage() {
   }, [])
 
   useEffect(() => {
-    if (session?.user?.id) {
+    if (userId) {
       fetchDashboardData()
       checkSyncStatus()
     }
-  }, [session])
+  }, [userId])
 
   const stopPolling = () => {
     if (pollRef.current) {
@@ -53,10 +53,10 @@ export default function DashboardPage() {
       stopPolling() // Ensure only one poll
       
       pollRef.current = setInterval(async () => {
-          if (!session?.user?.id) return
+          if (!userId) return
           
           try {
-              const res = await api.get(`/gmail/sync/status/${session.user.id}`)
+              const res = await api.get(`/gmail/sync/status/${userId}`)
               const status = res.data
               
               if (status.status === 'running') {
@@ -86,9 +86,9 @@ export default function DashboardPage() {
   }
 
   const checkSyncStatus = async () => {
-      if (!session?.user?.id) return
+      if (!userId) return
       try {
-          const res = await api.get(`/gmail/sync/status/${session.user.id}`)
+          const res = await api.get(`/gmail/sync/status/${userId}`)
           if (res.data?.status === 'running') {
               setScanning(true)
               setSyncProgress(res.data.message || 'Resuming sync...')
@@ -103,8 +103,8 @@ export default function DashboardPage() {
     setLoading(true)
     try {
       const [statsRes, emailsRes] = await Promise.all([
-        api.get('/dashboard/stats', { params: { user_id: session?.user?.id } }),
-        api.get('/emails', { params: { limit: 5, user_id: session?.user?.id } })
+        api.get('/dashboard/stats', { params: { user_id: userId } }),
+        api.get('/emails', { params: { limit: 5, user_id: userId } })
       ])
       
       const s = statsRes.data
@@ -124,7 +124,10 @@ export default function DashboardPage() {
   }
 
   const handleScan = async () => {
-      if (!session?.user?.id) return;
+
+    console.log("Scanning...")  
+    console.log(userId)
+      if (!userId) return;
       setScanning(true);
       setSyncProgress('Starting...');
       
@@ -137,7 +140,7 @@ export default function DashboardPage() {
           trackEvent({ action: 'scan_gmail', category: AnalyticsCategories.DASHBOARD, label: 'manual_scan' })
           
           await api.post('/gmail/sync', { 
-            user_id: session.user.id,
+            user_id: userId,
             mode: 'full'
           });
           
@@ -163,7 +166,7 @@ export default function DashboardPage() {
         <div className="mb-12 animate-slide-down flex items-end justify-between">
           <div>
             <h1 className="text-5xl font-bold mb-2 text-foreground">
-                Good evening, <span className="text-primary">{session?.user?.name || 'Mitesh'}</span>
+                Good evening, <span className="text-primary">{user?.name || 'Mitesh'}</span>
             </h1>
             <p className="text-lg text-muted-foreground">Here's what matters today</p>
           </div>

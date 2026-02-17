@@ -4,12 +4,13 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Mail, Clock, Lock, Trash2, LogOut, AlertTriangle } from 'lucide-react'
-import { signOut, useSession, signIn } from 'next-auth/react'
+import { signIn } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
 import api from '@/lib/api'
 import { trackEvent } from '@/lib/analytics'
 
 export default function SettingsPage() {
-  const { data: session } = useSession()
+  const { user, userId, signOut } = useAuth()
   const [digestTime, setDigestTime] = useState('09:00')
   const [aiMode, setAiMode] = useState('cloud')
   const [privacyMode, setPrivacyMode] = useState(false)
@@ -19,12 +20,12 @@ export default function SettingsPage() {
 
   // Fetch Gmail Status
   useEffect(() => {
-    if (session?.user?.id) {
-        api.get('/gmail/status', { params: { user_id: session.user.id } })
+    if (userId) {
+        api.get('/gmail/status', { params: { user_id: userId } })
            .then((res: any) => setGmailStatus(res.data))
            .catch((err: any) => console.error(err))
     }
-  }, [session])
+  }, [userId])
 
   const handleUpgrade = () => {
     trackEvent({ action: 'enable_auto_labeling', category: 'Settings', label: 'User clicked upgrade' })
@@ -35,7 +36,7 @@ export default function SettingsPage() {
   }
 
   const handleSignOut = () => {
-    signOut({ callbackUrl: '/' })
+    signOut()
   }
 
   const handleDeleteAll = async () => {
@@ -47,9 +48,9 @@ export default function SettingsPage() {
     setDeleting(true)
     try {
       // In production, call API to delete user data
-      // await api.delete(`/users/${session?.user?.id}/data`)
+      // await api.delete(`/users/${userId}/data`)
       await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate API call
-      signOut({ callbackUrl: '/' })
+      signOut()
     } catch (error) {
       console.error('Failed to delete data:', error)
       setDeleting(false)
@@ -72,7 +73,7 @@ export default function SettingsPage() {
               <Mail className="w-5 h-5" />
               Connected Gmail Account
             </h3>
-            <p className="text-muted-foreground">{session?.user?.email || 'user@gmail.com'}</p>
+            <p className="text-muted-foreground">{user?.email || 'user@gmail.com'}</p>
             <div className="mt-4 space-y-2">
                 <div className="flex items-center gap-2">
                     <div className={`w-2 h-2 rounded-full ${gmailStatus?.connected ? 'bg-green-500' : 'bg-red-500'}`} />

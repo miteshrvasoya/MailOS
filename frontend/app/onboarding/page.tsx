@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -23,7 +23,7 @@ const CATEGORIES = [
 ]
 
 export default function OnboardingPage() {
-  const { data: session } = useSession()
+  const { userId } = useAuth()
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(0)
   const [actionMode, setActionMode] = useState('review_first')
@@ -33,14 +33,6 @@ export default function OnboardingPage() {
   const [previewResults, setPreviewResults] = useState<{category: string, count: number}[]>([])
   const [loading, setLoading] = useState(false)
   const [syncInProgress, setSyncInProgress] = useState(false)
-  const [userId, setUserId] = useState<string | null>(null)
-
-  useEffect(() => {
-    // Get user ID from session
-    if (session?.user?.id) {
-      setUserId(session.user.id as string)
-    }
-  }, [session])
 
   const nextStep = async () => {
     // Save state to backend at key steps

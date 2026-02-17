@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
 import { 
   Bell, Mail, FileText, Settings, Shield, Zap, CheckCircle, Trash2, Check, 
   Sparkles, Filter, BellRing, Archive, MoreHorizontal, ExternalLink
@@ -179,7 +179,7 @@ function formatTimeAgo(dateString: string): string {
 }
 
 export default function NotificationsPage() {
-  const { data: session } = useSession()
+  const { userId } = useAuth()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [filter, setFilter] = useState<'all' | 'unread'>('all')
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
@@ -188,11 +188,19 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     fetchNotifications()
-  }, [session])
+  }, [userId])
 
   const fetchNotifications = async () => {
+    if (!userId) return
     try {
-      setNotifications(demoNotifications)
+      setLoading(true)
+      const res = await fetch(`${API_URL}/notifications/?user_id=${userId}`)
+      if (res.ok) {
+        const data = await res.json()
+        setNotifications(data)
+      } else {
+        setNotifications(demoNotifications)
+      }
     } catch (error) {
       console.error('Failed to fetch notifications:', error)
       setNotifications(demoNotifications)
@@ -201,18 +209,40 @@ export default function NotificationsPage() {
     }
   }
 
-  const markAsRead = async (id: number) => {
-    setNotifications(prev =>
-      prev.map(n => (n.id === id ? { ...n, is_read: true, read_at: new Date().toISOString() } : n))
-    )
+  const markAsRead = async (id: number | string) => {
+    try {
+      const res = await fetch(`${API_URL}/notifications/${id}/read`, { method: 'PATCH' })
+      if (res.ok) {
+        setNotifications(prev =>
+          prev.map(n => (n.id === id ? { ...n, is_read: true, read_at: new Date().toISOString() } : n))
+        )
+      }
+    } catch (error) {
+      console.error('Failed to mark as read:', error)
+    }
   }
 
   const markAllAsRead = async () => {
-    setNotifications(prev => prev.map(n => ({ ...n, is_read: true, read_at: new Date().toISOString() })))
+    if (!userId) return
+    try {
+      const res = await fetch(`${API_URL}/notifications/mark-all-read?user_id=${userId}`, { method: 'PATCH' })
+      if (res.ok) {
+        setNotifications(prev => prev.map(n => ({ ...n, is_read: true, read_at: new Date().toISOString() })))
+      }
+    } catch (error) {
+      console.error('Failed to mark all as read:', error)
+    }
   }
 
-  const deleteNotification = async (id: number) => {
-    setNotifications(prev => prev.filter(n => n.id !== id))
+  const deleteNotification = async (id: number | string) => {
+    try {
+      const res = await fetch(`${API_URL}/notifications/${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        setNotifications(prev => prev.filter(n => n.id !== id))
+      }
+    } catch (error) {
+      console.error('Failed to delete notification:', error)
+    }
   }
 
   const filteredNotifications = notifications.filter(n => {

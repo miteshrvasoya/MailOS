@@ -4,8 +4,8 @@ import { MailOpen, LogOut, User, Settings as SettingsIcon, LayoutDashboard } fro
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { usePathname } from 'next/navigation'
-import { signOut, useSession, signIn } from 'next-auth/react'
-import { useEffect } from 'react'
+import { useAuth } from '@/hooks/useAuth'
+import { signOut, signIn } from 'next-auth/react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,32 +17,18 @@ import {
 
 export function Header() {
   const pathname = usePathname()
-  const { data: session, status } = useSession()
-  const isLoggedIn = status === 'authenticated' && !!session?.user
+  const { user, userId, isAuthenticated: isLoggedIn, isLoading } = useAuth()
   const isDashboardPage = pathname.startsWith('/dashboard')
   
-  const userInitials = session?.user?.name
-    ? session.user.name.split(' ').map(n => n[0]).join('').toUpperCase()
+  const userInitials = user?.name
+    ? user.name.split(' ').map(n => n[0]).join('').toUpperCase()
     : 'U'
-
-  // Sync session to localStorage for fast hydration
-  useEffect(() => {
-    if (isLoggedIn && session?.user) {
-      localStorage.setItem('mailos_user', JSON.stringify({
-        name: session.user.name,
-        email: session.user.email,
-        id: session.user.id,
-      }))
-    } else if (status === 'unauthenticated') {
-      localStorage.removeItem('mailos_user')
-    }
-  }, [isLoggedIn, session, status])
 
   const handleLogin = () => {
     signIn('google', { callbackUrl: '/dashboard' })
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     localStorage.removeItem('mailos_user')
     signOut({ callbackUrl: '/' })
   }
@@ -102,9 +88,9 @@ export function Header() {
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{session?.user?.name}</p>
+                    <p className="text-sm font-medium leading-none">{user?.name}</p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      {session?.user?.email}
+                      {user?.email}
                     </p>
                   </div>
                 </DropdownMenuLabel>

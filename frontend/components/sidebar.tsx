@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { MailOpen, LayoutGrid, Inbox, Settings, FileText, BarChart3, MessageSquare, Sliders, User, Bell, Sparkles, Reply, AlarmClock, Brain, ListTodo } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
 import { trackEvent, AnalyticsCategories } from '@/lib/analytics'
 
 const navItems = [
@@ -26,7 +26,7 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname()
-  const { data: session } = useSession()
+  const { user, userId } = useAuth()
   
   return (
     <aside className="w-64 border-r border-border bg-card h-screen sticky top-0 flex flex-col">
@@ -70,7 +70,7 @@ export function Sidebar() {
       
       <div className="p-4 border-t border-border text-xs text-muted-foreground">
         <p>Connected to Gmail</p>
-        <p className="mt-1 truncate">{session?.user?.email || 'Not signed in'}</p>
+        <p className="mt-1 truncate">{user?.email || 'Not signed in'}</p>
       </div>
     </aside>
   )

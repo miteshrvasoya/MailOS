@@ -1,3 +1,4 @@
+import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from typing import List, Optional
@@ -16,7 +17,7 @@ router = APIRouter()
 
 @router.get("/", response_model=List[NotificationRead])
 def get_notifications(
-    user_id: int,
+    user_id: uuid.UUID,
     unread_only: bool = False,
     category: Optional[NotificationCategory] = None,
     session: Session = Depends(get_session)
@@ -36,7 +37,7 @@ def get_notifications(
     return notifications
 
 @router.get("/unread-count")
-def get_unread_count(user_id: int, session: Session = Depends(get_session)):
+def get_unread_count(user_id: uuid.UUID, session: Session = Depends(get_session)):
     """Get count of unread notifications for a user."""
     query = select(Notification).where(
         Notification.user_id == user_id,
@@ -58,7 +59,7 @@ def create_notification(
     return db_notification
 
 @router.patch("/{notification_id}/read")
-def mark_as_read(notification_id: int, session: Session = Depends(get_session)):
+def mark_as_read(notification_id: uuid.UUID, session: Session = Depends(get_session)):
     """Mark a notification as read."""
     notification = session.get(Notification, notification_id)
     if not notification:
@@ -71,7 +72,7 @@ def mark_as_read(notification_id: int, session: Session = Depends(get_session)):
     return {"success": True}
 
 @router.patch("/mark-all-read")
-def mark_all_as_read(user_id: int, session: Session = Depends(get_session)):
+def mark_all_as_read(user_id: uuid.UUID, session: Session = Depends(get_session)):
     """Mark all notifications as read for a user."""
     query = select(Notification).where(
         Notification.user_id == user_id,
@@ -88,7 +89,7 @@ def mark_all_as_read(user_id: int, session: Session = Depends(get_session)):
     return {"success": True, "marked_count": len(notifications)}
 
 @router.delete("/{notification_id}")
-def delete_notification(notification_id: int, session: Session = Depends(get_session)):
+def delete_notification(notification_id: uuid.UUID, session: Session = Depends(get_session)):
     """Delete a notification."""
     notification = session.get(Notification, notification_id)
     if not notification:

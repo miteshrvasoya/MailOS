@@ -1,13 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
 import { useRouter, usePathname } from 'next/navigation'
 import api from '@/lib/api'
 import { Loader2 } from 'lucide-react'
 
 export function OnboardingGuard({ children }: { children: React.ReactNode }) {
-  const { data: session, status } = useSession()
+  const { userId, isLoading } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
   const [checking, setChecking] = useState(true)
@@ -15,16 +15,16 @@ export function OnboardingGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const checkOnboarding = async () => {
-      if (status === 'loading') return
+      if (isLoading) return
       
-      if (!session?.user?.id) {
+      if (!userId) {
         setChecking(false)
         setPassed(true) // Let middleware handle auth
         return
       }
       
       try {
-        const res = await api.get(`/onboarding/state/${session.user.id}`)
+        const res = await api.get(`/onboarding/state/${userId}`)
         const { completed } = res.data
         
         if (!completed && !pathname.startsWith('/onboarding')) {
@@ -42,7 +42,7 @@ export function OnboardingGuard({ children }: { children: React.ReactNode }) {
     }
     
     checkOnboarding()
-  }, [session, status, pathname, router])
+  }, [userId, isLoading, pathname, router])
 
   if (checking) {
     return (

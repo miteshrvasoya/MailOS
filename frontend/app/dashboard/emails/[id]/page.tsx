@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -124,7 +124,7 @@ export default function EmailDetailPage() {
   const params = useParams()
   const router = useRouter()
   const emailId = params.id as string
-  const { data: session } = useSession()
+  const { user, userId } = useAuth()
 
   const [email, setEmail] = useState<EmailInsight | null>(null)
   const [loading, setLoading] = useState(true)
@@ -165,8 +165,8 @@ export default function EmailDetailPage() {
   }
 
   const handleOpenInGmail = () => {
-    if (!email || !session?.user?.email) return
-    const gmailUrl = `https://mail.google.com/mail/u/${session.user.email}/#all/${email.gmail_message_id}`
+    if (!email || !user?.email) return
+    const gmailUrl = `https://mail.google.com/mail/u/${user.email}/#all/${email.gmail_message_id}`
     window.open(gmailUrl, '_blank')
   }
 

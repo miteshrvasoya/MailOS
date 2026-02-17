@@ -10,26 +10,26 @@ import { getTasks, createTask, updateTask, Task } from '@/lib/api'
 import { useToast } from '@/components/ui/use-toast'
 import { format } from 'date-fns'
 
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
 
 export default function TasksPage() {
-  const { data: session } = useSession()
+  const { userId } = useAuth()
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const { toast } = useToast()
 
   useEffect(() => {
-    if (session?.user?.id) {
+    if (userId) {
       loadTasks()
     }
-  }, [session])
+  }, [userId])
 
   const loadTasks = async () => {
-    if (!session?.user?.id) return
+    if (!userId) return
     setLoading(true)
     try {
-      const data = await getTasks(session.user.id)
+      const data = await getTasks(userId)
       setTasks(data)
     } catch (e) {
       console.error(e)
@@ -40,10 +40,10 @@ export default function TasksPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!newTaskTitle.trim() || !session?.user?.id) return
+    if (!newTaskTitle.trim() || !userId) return
 
     try {
-      const task = await createTask(session.user.id, { title: newTaskTitle, status: 'pending', priority: 'medium' })
+      const task = await createTask(userId, { title: newTaskTitle, status: 'pending', priority: 'medium' })
       setTasks([task, ...tasks])
       setNewTaskTitle('')
       toast({ title: 'Task created' })
@@ -53,13 +53,13 @@ export default function TasksPage() {
   }
 
   const toggleStatus = async (task: Task) => {
-    if (!session?.user?.id) return
+    if (!userId) return
     const newStatus = task.status === 'done' ? 'pending' : 'done'
     // Optimistic update
     setTasks(tasks.map(t => t.id === task.id ? { ...t, status: newStatus } : t))
     
     try {
-      await updateTask(session.user.id, task.id, { status: newStatus })
+      await updateTask(userId, task.id, { status: newStatus })
     } catch (e) {
       toast({ title: 'Failed to update task', variant: 'destructive' })
       loadTasks() // Revert

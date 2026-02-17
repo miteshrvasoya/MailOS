@@ -1,6 +1,6 @@
 'use client'
 
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
 import { useEffect, useState } from 'react'
 import api from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -17,15 +17,15 @@ interface UserProfile {
 }
 
 export default function ProfilePage() {
-  const { data: session } = useSession()
+  const { user } = useAuth()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchProfile = async () => {
-      if (session?.user?.email) {
+      if (user?.email) {
         try {
-          const res = await api.get(`/users/by-email/${session.user.email}`)
+          const res = await api.get(`/users/by-email/${user.email}`)
           setProfile(res.data)
         } catch (error) {
           console.error("Failed to fetch profile", error)
@@ -35,7 +35,7 @@ export default function ProfilePage() {
       }
     }
     fetchProfile()
-  }, [session])
+  }, [user])
 
   if (loading) {
     return <div className="p-8 text-muted-foreground">Loading profile...</div>

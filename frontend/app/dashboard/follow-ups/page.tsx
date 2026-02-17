@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
 import api from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -43,9 +43,8 @@ export default function FollowUpsPage() {
   const [scanning, setScanning] = useState(false)
   const [processing, setProcessing] = useState<string | null>(null)
 
-  const { data: session } = useSession()
+  const { userId } = useAuth()
   const { toast } = useToast()
-  const userId = (session?.user as any)?.id
 
   const fetchData = useCallback(async () => {
     if (!userId) return

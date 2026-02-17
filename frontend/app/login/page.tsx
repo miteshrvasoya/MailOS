@@ -3,35 +3,36 @@
 import { Header } from '@/components/header'
 import { Button } from '@/components/ui/button'
 import { MailOpen, Loader2 } from 'lucide-react'
-import { signIn, useSession } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
+import { signIn } from 'next-auth/react'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
-  const [isLoading, setIsLoading] = useState(false)
-  const { data: session, status } = useSession()
+  const [isSigningIn, setIsSigningIn] = useState(false)
+  const { isAuthenticated, isLoading, user } = useAuth()
   const router = useRouter()
 
   // Redirect to dashboard if already logged in
   useEffect(() => {
-    if (status === 'authenticated' && session?.user) {
+    if (isAuthenticated && !isLoading) {
       router.replace('/dashboard')
     }
-  }, [status, session, router])
+  }, [isAuthenticated, isLoading, router])
 
   const handleLogin = async () => {
     try {
-      setIsLoading(true)
+      setIsSigningIn(true)
       await signIn('google', { callbackUrl: '/dashboard' })
     } catch (error) {
       console.error('Login failed:', error)
     } finally {
-      setIsLoading(false)
+      setIsSigningIn(false)
     }
   }
 
   // Show loading while checking auth or redirecting
-  if (status === 'loading' || (status === 'authenticated' && session?.user)) {
+  if (isLoading || isAuthenticated) {
     return (
       <main className="min-h-screen bg-background flex flex-col">
         <Header />

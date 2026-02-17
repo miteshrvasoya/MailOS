@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
 import api from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -76,9 +76,8 @@ export default function DigestsPage() {
   const [showHistory, setShowHistory] = useState(false)
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
 
-  const { data: session } = useSession()
+  const { userId } = useAuth()
   const { toast } = useToast()
-  const userId = (session?.user as any)?.id
 
   const fetchData = useCallback(async () => {
     if (!userId) return

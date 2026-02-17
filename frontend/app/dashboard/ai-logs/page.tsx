@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
 import api from '@/lib/api'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -50,19 +50,22 @@ export default function AILogsPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [filter, setFilter] = useState<'all' | 'success' | 'error'>('all')
 
-  const { data: session } = useSession()
-  const userId = (session?.user as any)?.id
+  const { userId } = useAuth()
 
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
+      if (userId) params.append('user_id', userId)
       if (filter !== 'all') params.append('status', filter)
       params.append('limit', '100')
 
+      const summaryParams = new URLSearchParams()
+      if (userId) summaryParams.append('user_id', userId)
+
       const [logsRes, summaryRes] = await Promise.all([
         api.get(`/ai-logs?${params.toString()}`),
-        api.get('/ai-logs/summary'),
+        api.get(`/ai-logs/summary?${summaryParams.toString()}`),
       ])
       setLogs(logsRes.data)
       setSummary(summaryRes.data)
@@ -71,7 +74,7 @@ export default function AILogsPage() {
     } finally {
       setLoading(false)
     }
-  }, [filter])
+  }, [filter, userId])
 
   useEffect(() => {
     fetchData()

@@ -13,7 +13,7 @@ import api from '@/lib/api'
 import { formatDistanceToNow } from 'date-fns'
 import { trackEvent } from '@/lib/analytics'
 import { useToast } from '@/components/ui/use-toast'
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
 
 interface Action {
   id: string
@@ -45,7 +45,7 @@ export default function SuggestionsPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [undoItems, setUndoItems] = useState<UndoItem[]>([])
   const undoIntervalsRef = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map())
-  const { data: session } = useSession()
+  const { userId } = useAuth()
 
   const { toast } = useToast()
 
@@ -55,12 +55,12 @@ export default function SuggestionsPage() {
       // Cleanup undo timers
       undoIntervalsRef.current.forEach(interval => clearInterval(interval))
     }
-  }, [session])
+  }, [userId])
 
   const fetchActions = async () => {
     try {
-      if (!session?.user?.id) return
-      const res = await api.get('/actions/pending-list', { params: { user_id: session.user.id } })
+      if (!userId) return
+      const res = await api.get('/actions/pending-list', { params: { user_id: userId } })
       setActions(res.data)
     } catch (error) {
       console.error('Failed to fetch actions:', error)

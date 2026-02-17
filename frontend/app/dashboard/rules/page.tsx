@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
 import api from '@/lib/api'
 import { trackEvent, AnalyticsCategories } from '@/lib/analytics'
 import { Button } from '@/components/ui/button'
@@ -105,18 +105,20 @@ export default function RulesPage() {
   const [parsedPreview, setParsedPreview] = useState<ParsedRulePreview | null>(null)
   const [isCreatingParsed, setIsCreatingParsed] = useState(false)
 
-  const { data: session } = useSession()
+  const { userId } = useAuth()
   const { toast } = useToast()
 
   useEffect(() => {
-    fetchRules()
-    fetchTemplates()
-  }, [])
+    if (userId) {
+      fetchRules()
+      fetchTemplates()
+    }
+  }, [userId])
 
   const fetchRules = async () => {
     setLoading(true)
     try {
-      const res = await api.get('/rules')
+      const res = await api.get('/rules', { params: { user_id: userId } })
       setRules(res.data)
     } catch (e) {
       console.error("Failed to fetch rules", e)
@@ -187,7 +189,6 @@ export default function RulesPage() {
   }
 
   const handleEnableTemplate = async (templateId: string) => {
-    const userId = (session?.user as any)?.id
     if (!userId) {
       toast({ title: "Not logged in", description: "Please log in to create rules.", variant: "destructive" })
       return
@@ -222,7 +223,6 @@ export default function RulesPage() {
   }
 
   const handleParseText = async () => {
-      const userId = (session?.user as any)?.id
       if (!userId || !nlInput.trim()) return
 
       setIsParsing(true)
@@ -251,7 +251,6 @@ export default function RulesPage() {
 
   const handleCreateFromParsed = async () => {
       if (!parsedPreview) return
-      const userId = (session?.user as any)?.id
       
       setIsCreatingParsed(true)
       try {

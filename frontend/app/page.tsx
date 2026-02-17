@@ -4,11 +4,11 @@ import Link from 'next/link'
 import { Header } from '@/components/header'
 import { Button } from '@/components/ui/button'
 import { ArrowRight, Shield, Zap, Lock, Filter, Brain, Settings, LayoutDashboard } from 'lucide-react'
-import { signIn, useSession } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
+import { signIn } from 'next-auth/react'
 
 export default function LandingPage() {
-  const { data: session, status } = useSession()
-  const isLoggedIn = status === 'authenticated' && !!session?.user
+  const { isAuthenticated: isLoggedIn, isLoading: isAuthLoading } = useAuth()
 
   const handleGoogleSignIn = () => {
     signIn('google', { callbackUrl: '/dashboard' })

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
 import api from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -57,9 +57,8 @@ export default function CategoriesPage() {
   const [editName, setEditName] = useState('')
   const [editColor, setEditColor] = useState('')
 
-  const { data: session } = useSession()
+  const { userId } = useAuth()
   const { toast } = useToast()
-  const userId = (session?.user as any)?.id
 
   const fetchCategories = useCallback(async () => {
     if (!userId) return

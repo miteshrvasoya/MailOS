@@ -10,7 +10,8 @@ import {
   MessageSquare, AlarmClock, BookOpen, LayoutDashboard,
   Cpu, Eye, TrendingUp, Settings2
 } from 'lucide-react'
-import { signIn, useSession } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
+import { signIn } from 'next-auth/react'
 import { trackEvent, AnalyticsCategories } from '@/lib/analytics'
 
 function FeatureSection({
@@ -92,8 +93,7 @@ function MockCard({ className = '', children }: { className?: string; children: 
 }
 
 export default function FeaturesPage() {
-  const { data: session, status } = useSession()
-  const isLoggedIn = status === 'authenticated' && !!session?.user
+  const { isAuthenticated: isLoggedIn, isLoading } = useAuth()
 
   const handleCTA = () => {
     trackEvent({ action: 'features_cta_click', category: AnalyticsCategories.FEATURES, label: isLoggedIn ? 'dashboard' : 'signup' })
