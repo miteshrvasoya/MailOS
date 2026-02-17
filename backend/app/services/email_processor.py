@@ -253,9 +253,13 @@ def process_emails_batch(
 
     # 3. Process each email with its classification
     from app.services.sync_manager import sync_manager
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    logger.info(f"Processing {len(new_emails)} new emails for user {user.id}")
     
     results = []
-    for email_data, ai_result in zip(new_emails, all_ai_results):
+    for idx, (email_data, ai_result) in enumerate(zip(new_emails, all_ai_results)):
         try:
             result = _process_single_with_classification(
                 db, user, email_data, ai_result, is_preview, gmail_service
@@ -265,13 +269,16 @@ def process_emails_batch(
             # Update Progress
             sync_manager.update_progress(user.id)
             
+            if (idx + 1) % 5 == 0 or (idx + 1) == len(new_emails):
+                logger.info(f"Sync Progress: {idx + 1}/{len(new_emails)} emails processed for user {user.id}")
+            
         except Exception as e:
-            import logging
-            logging.getLogger(__name__).debug(
+            logger.debug(
                 f"Skipping email {email_data.get('gmail_message_id')}: {e}"
             )
             continue
 
+    logger.info(f"Completed batch processing: {len(results)} results generated for user {user.id}")
     return results
 
 

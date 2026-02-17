@@ -166,7 +166,7 @@ export default function DashboardPage() {
         <div className="mb-12 animate-slide-down flex items-end justify-between">
           <div>
             <h1 className="text-5xl font-bold mb-2 text-foreground">
-                Good evening, <span className="text-primary">{user?.name || 'Mitesh'}</span>
+              Good evening, <span className="text-primary">{user?.name || 'Mitesh'}</span>
             </h1>
             <p className="text-lg text-muted-foreground">Here's what matters today</p>
           </div>

@@ -75,7 +75,7 @@ def sync_gmail(
     if current_status.get("status") == "running":
         return {"status": "running", "message": "Sync already in progress"}
         
-    logger.info(f"Initiating background sync for user {user.id}")
+    logger.info(f"Initiating background sync for user {user.id} (mode={req.mode}, limit={req.limit}, force_full={req.force_full})")
     
     # Initialize Sync State
     sync_manager.start_sync(req.user_id, type=req.mode)
@@ -122,6 +122,7 @@ def _run_sync_task(user_id: uuid.UUID, limit: int, mode: str, force_full: bool):
             
             # Full sync fallback
             if not raw_emails and sync_type == "full" or (sync_type == "incremental" and not raw_emails and not new_history_id):
+                logger.info(f"Performing full sync for user {user_id} (limit={limit})")
                 raw_emails = service.fetch_preview_emails(limit=limit)
                 sync_type = "full"
                 logger.info(f"Full sync: fetched {len(raw_emails)} emails")
@@ -139,6 +140,7 @@ def _run_sync_task(user_id: uuid.UUID, limit: int, mode: str, force_full: bool):
             sync_manager.set_total(user_id, len(raw_emails))
 
             # Process
+            logger.info(f"Beginning batch processing of {len(raw_emails)} emails for user {user_id}")
             process_emails_batch(
                 db, user, raw_emails, is_preview=(mode == "preview"), gmail_service=service
             )
