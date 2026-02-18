@@ -13,6 +13,7 @@ from app.services.gmail_service import GmailService, HistoryExpiredError
 from app.services.email_processor import store_raw_emails, classify_stored_emails
 from app.models.google_credential import GoogleCredential
 from app.services.sync_manager import sync_manager
+from app.services.digest_service import generate_digest
 
 logger = logging.getLogger(__name__)
 
@@ -218,7 +219,7 @@ def _run_fetch_phase(user_id: uuid.UUID, limit: int, mode: str, force_full: bool
 
 def _run_classification_phase(user_id: uuid.UUID, limit: int):
     """
-    Phase 2: Classify pending emails from DB.
+    Phase 2: Classify pending emails from DB and generate a digest.
     """
     from app.db.session import engine
     
@@ -232,5 +233,16 @@ def _run_classification_phase(user_id: uuid.UUID, limit: int):
         # Classify
         logger.info(f"[SYNC] Starting classification phase for {user_id}")
         stats = classify_stored_emails(db, user, limit=limit, gmail_service=service)
-        
         logger.info(f"[SYNC] Classification complete: {stats.classified} classified, {stats.failed} failed")
+
+        # Generate a fresh daily digest in the background based on newly classified emails
+        try:
+            sync_manager.set_phase(user_id, "digesting", "Generating daily digest...")
+            digest = generate_digest(db, user_id=user.id, digest_type="daily")
+            logger.info(
+                f"[SYNC] Digest generated for user {user_id}: "
+                f"{digest.stats.get('total_emails', 0)} emails, "
+                f"{digest.stats.get('important', 0)} important"
+            )
+        except Exception as e:
+            logger.error(f"[SYNC] Digest generation failed for {user_id}: {e}")

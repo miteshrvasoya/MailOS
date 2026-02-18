@@ -57,10 +57,10 @@ def generate_digest(
         "high_urgency": high_urgency,
     }
 
-    # Group by category
+    # Group by category (derived from labels/tags + category field)
     category_map: Dict[str, List[EmailInsight]] = {}
     for email in emails:
-        cat = email.category or "Uncategorized"
+        cat = _derive_digest_category(email)
         category_map.setdefault(cat, []).append(email)
 
     # Build sections
@@ -155,6 +155,36 @@ def _category_emoji(category: str) -> str:
         "Uncategorized": "📧",
     }
     return emojis.get(category, "📧")
+
+
+def _derive_digest_category(email: EmailInsight) -> str:
+    """
+    Derive a digest category using labels/tags when available for more precise grouping.
+
+    Preference order:
+    1. AI:... tags (e.g. 'AI:Finance', 'AI:Work')
+    2. Rule:... tags (e.g. 'Rule:Job Applications')
+    3. email.category field
+    4. 'Uncategorized'
+    """
+    tags = getattr(email, "classification_tags", None) or []
+
+    # Prefer AI-derived category tags
+    for tag in tags:
+        if isinstance(tag, str) and tag.startswith("AI:"):
+            value = tag.split("AI:", 1)[1].strip()
+            if value:
+                return value
+
+    # Fall back to rule-based tags
+    for tag in tags:
+        if isinstance(tag, str) and tag.startswith("Rule:"):
+            value = tag.split("Rule:", 1)[1].strip()
+            if value:
+                return value
+
+    # Finally, use the stored category or default
+    return email.category or "Uncategorized"
 
 
 def get_latest_digest(db: Session, user_id: uuid.UUID, digest_type: str = "daily") -> Optional[Digest]:

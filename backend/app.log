@@ -2175,3 +2175,23 @@ LINE 1: INSERT INTO task (title, description, status, priority, due_...
 2026-02-18 20:09:08,499 [INFO] app.db.init_db: Running Alembic migrations... (SKIPPED for debugging)
 2026-02-18 20:09:08,499 [INFO] app.db.init_db: Alembic migrations skipped.
 2026-02-18 20:09:08,500 [WARNING] app.main: APScheduler not installed. Background sync disabled. Install with: pip install apscheduler
+2026-02-18 20:38:52,558 [INFO] app.main: Initializing Database...
+2026-02-18 20:38:52,626 [INFO] app.db.init_db: Database mailos already exists.
+2026-02-18 20:38:52,626 [INFO] app.db.init_db: Running Alembic migrations... (SKIPPED for debugging)
+2026-02-18 20:38:52,626 [INFO] app.db.init_db: Alembic migrations skipped.
+2026-02-18 20:38:52,627 [WARNING] app.main: APScheduler not installed. Background sync disabled. Install with: pip install apscheduler
+2026-02-18 20:39:07,257 [INFO] app.main: Initializing Database...
+2026-02-18 20:39:07,339 [INFO] app.db.init_db: Database mailos already exists.
+2026-02-18 20:39:07,340 [INFO] app.db.init_db: Running Alembic migrations... (SKIPPED for debugging)
+2026-02-18 20:39:07,340 [INFO] app.db.init_db: Alembic migrations skipped.
+2026-02-18 20:39:07,341 [WARNING] app.main: APScheduler not installed. Background sync disabled. Install with: pip install apscheduler
+2026-02-18 20:55:48,589 [INFO] app.main: Initializing Database...
+2026-02-18 20:55:48,730 [INFO] app.db.init_db: Database mailos already exists.
+2026-02-18 20:55:48,731 [INFO] app.db.init_db: Running Alembic migrations... (SKIPPED for debugging)
+2026-02-18 20:55:48,732 [INFO] app.db.init_db: Alembic migrations skipped.
+2026-02-18 20:55:48,734 [WARNING] app.main: APScheduler not installed. Background sync disabled. Install with: pip install apscheduler
+2026-02-18 21:03:43,614 [INFO] app.main: Initializing Database...
+2026-02-18 21:03:43,691 [INFO] app.db.init_db: Database mailos already exists.
+2026-02-18 21:03:43,691 [INFO] app.db.init_db: Running Alembic migrations... (SKIPPED for debugging)
+2026-02-18 21:03:43,692 [INFO] app.db.init_db: Alembic migrations skipped.
+2026-02-18 21:03:43,692 [WARNING] app.main: APScheduler not installed. Background sync disabled. Install with: pip install apscheduler

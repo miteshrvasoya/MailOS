@@ -8,16 +8,50 @@ const api = axios.create({
   },
 });
 
-// Add a request interceptor to inject the user ID from the session
-api.interceptors.request.use(async (config) => {
-  const session = await getSession();
-  if (session?.user?.id) {
-    config.headers['X-User-Id'] = session.user.id;
+// Simple in-memory "refresh token" style cache for the session user ID
+let cachedUserId: string | null = null;
+let cachedExpiry = 0;
+let refreshPromise: Promise<string | null> | null = null;
+
+async function getCachedUserId(): Promise<string | null> {
+  const now = Date.now();
+  if (cachedUserId && now < cachedExpiry - 30_000) {
+    // Still valid (with 30s buffer)
+    return cachedUserId;
   }
-  return config;
-}, (error) => {
-  return Promise.reject(error);
-});
+
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
+  refreshPromise = (async () => {
+    const session = await getSession();
+    const id = (session as any)?.user?.id || null;
+    cachedUserId = id;
+
+    const expires = (session as any)?.expires;
+    cachedExpiry = expires ? new Date(expires).getTime() : now + 5 * 60_000; // fallback 5min
+
+    refreshPromise = null;
+    return id;
+  })();
+
+  return refreshPromise;
+}
+
+// Add a request interceptor to inject the user ID from the cached session
+api.interceptors.request.use(
+  async (config) => {
+    const userId = await getCachedUserId();
+    if (userId) {
+      (config.headers as any)['X-User-Id'] = userId;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  },
+);
 
 export default api;
 

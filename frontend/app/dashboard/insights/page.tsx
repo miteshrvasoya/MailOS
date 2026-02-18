@@ -1,44 +1,104 @@
-'use client'
+ 'use client'
 
+import { useEffect, useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts'
 import { TrendingUp, AlertCircle, Clock, Target, Zap, Settings } from 'lucide-react'
 import Link from 'next/link'
+import api from '@/lib/api'
+import { useAuth } from '@/hooks/useAuth'
+import { Skeleton } from '@/components/ui/skeleton'
 
-const categoryData = [
-  { name: 'Work', value: 34, fill: '#6b7280' },
-  { name: 'Finance', value: 12, fill: '#4b5563' },
-  { name: 'Newsletters', value: 45, fill: '#3a4452' },
-  { name: 'Personal', value: 9, fill: '#2a3442' },
-]
+type CategoryDatum = { category: string; count: number }
+type TrendDatum = { date: string; important: number; total: number }
+type BucketDatum = { range: string; emails: number }
+type SenderDatum = { sender: string; emails: number; percentage: number }
 
-const trendData = [
-  { date: 'Mon', important: 8, total: 45 },
-  { date: 'Tue', important: 12, total: 52 },
-  { date: 'Wed', important: 7, total: 38 },
-  { date: 'Thu', important: 15, total: 61 },
-  { date: 'Fri', important: 10, total: 48 },
-  { date: 'Sat', important: 3, total: 22 },
-  { date: 'Sun', important: 5, total: 18 },
-]
+interface KeyMetrics {
+  important_ratio: number
+  avg_response_hours: number | null
+  unread_this_week: number
+  unread_urgent: number
+  ai_accuracy: number | null
+}
 
-const responseData = [
-  { range: '0-1h', emails: 12 },
-  { range: '1-4h', emails: 28 },
-  { range: '4-24h', emails: 35 },
-  { range: '1-7d', emails: 18 },
-  { range: '7d+', emails: 7 },
-]
+interface VolumeSummary {
+  this_week: number
+  this_week_delta: number
+  this_month: number
+  this_month_delta: number
+  daily_average: number
+}
 
-const confidenceData = [
-  { range: '90-100%', emails: 67 },
-  { range: '80-90%', emails: 23 },
-  { range: '70-80%', emails: 8 },
-  { range: '<70%', emails: 2 },
-]
+interface EngagementSummary {
+  most_active_day: string
+  most_active_count: number
+  quietest_day: string
+  quietest_count: number
+  avg_processing_ms: number
+}
 
 export default function InsightsPage() {
+  const { userId } = useAuth()
+  const [loading, setLoading] = useState(true)
+
+  const [keyMetrics, setKeyMetrics] = useState<KeyMetrics | null>(null)
+  const [categoryData, setCategoryData] = useState<CategoryDatum[]>([])
+  const [trendData, setTrendData] = useState<TrendDatum[]>([])
+  const [responseData, setResponseData] = useState<BucketDatum[]>([])
+  const [confidenceData, setConfidenceData] = useState<BucketDatum[]>([])
+  const [topSenders, setTopSenders] = useState<SenderDatum[]>([])
+  const [volumeSummary, setVolumeSummary] = useState<VolumeSummary | null>(null)
+  const [engagementSummary, setEngagementSummary] = useState<EngagementSummary | null>(null)
+
+  useEffect(() => {
+    const fetchInsights = async () => {
+      if (!userId) return
+      setLoading(true)
+      try {
+        const res = await api.get('/insights/overview', { params: { user_id: userId } })
+        const data = res.data
+
+        setKeyMetrics(data.key_metrics)
+        setCategoryData(
+          (data.category_distribution || []).map((d: any) => ({
+            category: d.category,
+            count: d.count,
+          })),
+        )
+        setTrendData(data.importance_trend || [])
+        setResponseData(data.response_delay_distribution || [])
+        setConfidenceData(data.confidence_buckets || [])
+        setTopSenders(data.top_senders || [])
+        setVolumeSummary(data.volume_summary || null)
+        setEngagementSummary(data.engagement_summary || null)
+      } catch (e) {
+        console.error('Failed to fetch insights overview:', e)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchInsights()
+  }, [userId])
+
+  const pieColors = ['#6b7280', '#4b5563', '#3a4452', '#2a3442', '#1f2937']
+
   return (
     <div className="min-h-screen bg-background">
       <div className="p-8 max-w-7xl mx-auto">
@@ -55,9 +115,16 @@ export default function InsightsPage() {
                 <Target className="w-5 h-5 text-primary" />
               </div>
             </div>
-            <p className="text-3xl font-bold text-foreground">28%</p>
-            <p className="text-sm text-muted-foreground mt-1">Important emails detected</p>
-            <p className="text-xs text-primary font-semibold mt-2">+3% from last week</p>
+            {loading || !keyMetrics ? (
+              <Skeleton className="h-10 w-24" />
+            ) : (
+              <>
+                <p className="text-3xl font-bold text-foreground">
+                  {keyMetrics.important_ratio.toFixed(1)}%
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">Important emails detected</p>
+              </>
+            )}
           </Card>
 
           <Card className="p-6 card-hover border-border/50 hover:border-border">
@@ -66,9 +133,16 @@ export default function InsightsPage() {
                 <Clock className="w-5 h-5 text-primary" />
               </div>
             </div>
-            <p className="text-3xl font-bold text-foreground">4.2h</p>
-            <p className="text-sm text-muted-foreground mt-1">Avg response time</p>
-            <p className="text-xs text-primary font-semibold mt-2">↓ 15% faster than usual</p>
+            {loading || !keyMetrics || keyMetrics.avg_response_hours == null ? (
+              <Skeleton className="h-10 w-24" />
+            ) : (
+              <>
+                <p className="text-3xl font-bold text-foreground">
+                  {keyMetrics.avg_response_hours.toFixed(1)}h
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">Avg pending follow-up age</p>
+              </>
+            )}
           </Card>
 
           <Card className="p-6 card-hover border-border/50 hover:border-border">
@@ -77,9 +151,19 @@ export default function InsightsPage() {
                 <AlertCircle className="w-5 h-5 text-primary" />
               </div>
             </div>
-            <p className="text-3xl font-bold text-foreground">156</p>
-            <p className="text-sm text-muted-foreground mt-1">Unread this week</p>
-            <p className="text-xs text-destructive font-semibold mt-2">12 unread urgent</p>
+            {loading || !keyMetrics ? (
+              <Skeleton className="h-10 w-24" />
+            ) : (
+              <>
+                <p className="text-3xl font-bold text-foreground">
+                  {keyMetrics.unread_this_week}
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">Unread this week</p>
+                <p className="text-xs text-destructive font-semibold mt-2">
+                  {keyMetrics.unread_urgent} unread urgent
+                </p>
+              </>
+            )}
           </Card>
 
           <Card className="p-6 card-hover border-border/50 hover:border-border">
@@ -88,9 +172,16 @@ export default function InsightsPage() {
                 <TrendingUp className="w-5 h-5 text-primary" />
               </div>
             </div>
-            <p className="text-3xl font-bold text-foreground">94%</p>
-            <p className="text-sm text-muted-foreground mt-1">AI classification accuracy</p>
-            <p className="text-xs text-primary font-semibold mt-2">Learning & improving</p>
+            {loading || !keyMetrics || keyMetrics.ai_accuracy == null ? (
+              <Skeleton className="h-10 w-24" />
+            ) : (
+              <>
+                <p className="text-3xl font-bold text-foreground">
+                  {keyMetrics.ai_accuracy.toFixed(1)}%
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">AI classification success</p>
+              </>
+            )}
           </Card>
         </div>
 
@@ -147,106 +238,129 @@ export default function InsightsPage() {
         
         {/* Category Distribution */}
         <Card className="p-8 mb-8">
-          <h2 className="text-xl font-semibold mb-6">Category Distribution</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={categoryData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {categoryData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
+          <h2 className="text-xl font-semibold mb-6">Category Distribution (last 7 days)</h2>
+          {loading ? (
+            <Skeleton className="h-64 w-full" />
+          ) : categoryData.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No categorized emails yet.</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={categoryData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ category, percent }) =>
+                    `${category} ${(percent * 100).toFixed(0)}%`
+                  }
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="count"
+                >
+                  {categoryData.map((_, index) => (
+                    <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
         </Card>
         
         {/* Importance Trend */}
         <Card className="p-8 mb-8">
-          <h2 className="text-xl font-semibold mb-6">Importance Trend</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={trendData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="date" stroke="#6b7280" />
-              <YAxis stroke="#6b7280" />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#1f2937',
-                  border: 'none',
-                  borderRadius: '8px',
-                }}
-                labelStyle={{ color: '#e5e7eb' }}
-              />
-              <Legend />
-              <Line
-                type="monotone"
-                dataKey="important"
-                stroke="#ffffff"
-                strokeWidth={2}
-                name="Important emails"
-              />
-              <Line
-                type="monotone"
-                dataKey="total"
-                stroke="#6b7280"
-                strokeWidth={2}
-                name="Total emails"
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          <h2 className="text-xl font-semibold mb-6">Importance Trend (last 7 days)</h2>
+          {loading ? (
+            <Skeleton className="h-64 w-full" />
+          ) : trendData.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No recent emails to chart yet.</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={trendData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <XAxis dataKey="date" stroke="#6b7280" />
+                <YAxis stroke="#6b7280" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#1f2937',
+                    border: 'none',
+                    borderRadius: '8px',
+                  }}
+                  labelStyle={{ color: '#e5e7eb' }}
+                />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="important"
+                  stroke="#ffffff"
+                  strokeWidth={2}
+                  name="Important emails"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="total"
+                  stroke="#6b7280"
+                  strokeWidth={2}
+                  name="Total emails"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
         </Card>
         
         <div className="grid md:grid-cols-2 gap-8 mb-8">
           {/* Response Delay */}
           <Card className="p-8 border-border/50">
             <h2 className="text-xl font-semibold mb-6 text-foreground">Response Delay Distribution</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={responseData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis dataKey="range" stroke="#6b7280" />
-                <YAxis stroke="#6b7280" />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#1f2937',
-                    border: 'none',
-                    borderRadius: '8px',
-                  }}
-                  labelStyle={{ color: '#e5e7eb' }}
-                />
-                <Bar dataKey="emails" fill="#ffffff" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-            <p className="text-xs text-muted-foreground mt-4">Most emails are responded to within 4-24 hours</p>
+            {loading ? (
+              <Skeleton className="h-64 w-full" />
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={responseData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="range" stroke="#6b7280" />
+                  <YAxis stroke="#6b7280" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#1f2937',
+                      border: 'none',
+                      borderRadius: '8px',
+                    }}
+                    labelStyle={{ color: '#e5e7eb' }}
+                  />
+                  <Bar dataKey="emails" fill="#ffffff" radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+            <p className="text-xs text-muted-foreground mt-4">
+              Based on how long pending follow-ups have been waiting for a reply.
+            </p>
           </Card>
           
           {/* AI Confidence */}
           <Card className="p-8 border-border/50">
             <h2 className="text-xl font-semibold mb-6 text-foreground">AI Confidence Score</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={confidenceData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis dataKey="range" stroke="#6b7280" />
-                <YAxis stroke="#6b7280" />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#1f2937',
-                    border: 'none',
-                    borderRadius: '8px',
-                  }}
-                  labelStyle={{ color: '#e5e7eb' }}
-                />
-                <Bar dataKey="emails" fill="#ffffff" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-            <p className="text-xs text-muted-foreground mt-4">90% of classifications are highly confident (90%+)</p>
+            {loading ? (
+              <Skeleton className="h-64 w-full" />
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={confidenceData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="range" stroke="#6b7280" />
+                  <YAxis stroke="#6b7280" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#1f2937',
+                      border: 'none',
+                      borderRadius: '8px',
+                    }}
+                    labelStyle={{ color: '#e5e7eb' }}
+                  />
+                  <Bar dataKey="emails" fill="#ffffff" radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </Card>
         </div>
 
@@ -263,26 +377,33 @@ export default function InsightsPage() {
               </Button>
             </div>
             <div className="space-y-4">
-              {[
-                { sender: 'LinkedIn', emails: 87, percentage: 18 },
-                { sender: 'GitHub', emails: 67, percentage: 14 },
-                { sender: 'Stripe', emails: 54, percentage: 11 },
-                { sender: 'team@company.com', emails: 43, percentage: 9 },
-                { sender: 'Amazon', emails: 38, percentage: 8 },
-              ].map((item, idx) => (
-                <div key={idx} className="space-y-2 p-3 rounded-lg bg-secondary/20 hover:bg-secondary/30 transition">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-foreground">{item.sender}</p>
-                    <p className="text-xs text-muted-foreground">{item.emails} emails</p>
+              {loading ? (
+                <>
+                  <Skeleton className="h-16" />
+                  <Skeleton className="h-16" />
+                  <Skeleton className="h-16" />
+                </>
+              ) : topSenders.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No senders to show yet.</p>
+              ) : (
+                topSenders.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="space-y-2 p-3 rounded-lg bg-secondary/20 hover:bg-secondary/30 transition"
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-foreground">{item.sender}</p>
+                      <p className="text-xs text-muted-foreground">{item.emails} emails</p>
+                    </div>
+                    <div className="w-full bg-secondary/30 rounded-full h-1.5">
+                      <div
+                        className="bg-primary h-1.5 rounded-full"
+                        style={{ width: `${item.percentage}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="w-full bg-secondary/30 rounded-full h-1.5">
-                    <div 
-                      className="bg-primary h-1.5 rounded-full" 
-                      style={{ width: `${item.percentage * 10}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </Card>
 
@@ -297,25 +418,46 @@ export default function InsightsPage() {
               </Button>
             </div>
             <div className="space-y-4">
-              <div className="p-3 rounded-lg bg-secondary/20 border border-border/30">
-                <div className="flex justify-between mb-2">
-                  <p className="text-sm font-medium text-foreground">This week</p>
-                  <p className="text-sm font-semibold text-foreground">284 emails</p>
-                </div>
-                <div className="text-xs text-muted-foreground">+12% vs last week</div>
-              </div>
-              <div className="p-3 rounded-lg bg-secondary/20 border border-border/30">
-                <div className="flex justify-between mb-2">
-                  <p className="text-sm font-medium text-foreground">This month</p>
-                  <p className="text-sm font-semibold text-foreground">1,247 emails</p>
-                </div>
-                <div className="text-xs text-muted-foreground">-3% vs last month</div>
-              </div>
-              <div className="bg-secondary/30 rounded-lg p-3 border border-border/30">
-                <p className="text-sm text-muted-foreground">
-                  <span className="font-semibold text-foreground">Daily average:</span> 40.6 emails
-                </p>
-              </div>
+              {loading || !volumeSummary ? (
+                <>
+                  <Skeleton className="h-16" />
+                  <Skeleton className="h-16" />
+                  <Skeleton className="h-12" />
+                </>
+              ) : (
+                <>
+                  <div className="p-3 rounded-lg bg-secondary/20 border border-border/30">
+                    <div className="flex justify-between mb-2">
+                      <p className="text-sm font-medium text-foreground">This week</p>
+                      <p className="text-sm font-semibold text-foreground">
+                        {volumeSummary.this_week} emails
+                      </p>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {(volumeSummary.this_week_delta ?? 0) >= 0 ? '+' : ''}
+                      {Math.round((volumeSummary.this_week_delta ?? 0) * 100)}% vs last week
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-secondary/20 border border-border/30">
+                    <div className="flex justify-between mb-2">
+                      <p className="text-sm font-medium text-foreground">This month</p>
+                      <p className="text-sm font-semibold text-foreground">
+                        {volumeSummary.this_month} emails
+                      </p>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {(volumeSummary.this_month_delta ?? 0) >= 0 ? '+' : ''}
+                      {Math.round((volumeSummary.this_month_delta ?? 0) * 100)}% vs last month
+                    </div>
+                  </div>
+                  <div className="bg-secondary/30 rounded-lg p-3 border border-border/30">
+                    <p className="text-sm text-muted-foreground">
+                      <span className="font-semibold text-foreground">Daily average:</span>{' '}
+                      {volumeSummary.daily_average.toFixed(1)} emails
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           </Card>
         </div>
@@ -332,24 +474,41 @@ export default function InsightsPage() {
             </Button>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
-            <div className="space-y-3 p-4 bg-secondary/20 rounded-lg border border-border/30 hover:border-border transition">
-              <p className="text-sm font-semibold text-foreground">Most Active Day</p>
-              <p className="text-2xl font-bold text-primary">Thursday</p>
-              <p className="text-xs text-muted-foreground">61 emails received</p>
-              <p className="text-xs text-primary font-semibold mt-2">Peak activity time</p>
-            </div>
-            <div className="space-y-3 p-4 bg-secondary/20 rounded-lg border border-border/30 hover:border-border transition">
-              <p className="text-sm font-semibold text-foreground">Quietest Day</p>
-              <p className="text-2xl font-bold text-primary">Sunday</p>
-              <p className="text-xs text-muted-foreground">18 emails received</p>
-              <p className="text-xs text-primary font-semibold mt-2">Catch-up time</p>
-            </div>
-            <div className="space-y-3 p-4 bg-secondary/20 rounded-lg border border-border/30 hover:border-border transition">
-              <p className="text-sm font-semibold text-foreground">Avg Processing Speed</p>
-              <p className="text-2xl font-bold text-primary">2.3 sec</p>
-              <p className="text-xs text-muted-foreground">Per email analysis</p>
-              <p className="text-xs text-primary font-semibold mt-2">Lightning fast</p>
-            </div>
+            {loading || !engagementSummary ? (
+              <>
+                <Skeleton className="h-28" />
+                <Skeleton className="h-28" />
+                <Skeleton className="h-28" />
+              </>
+            ) : (
+              <>
+                <div className="space-y-3 p-4 bg-secondary/20 rounded-lg border border-border/30 hover:border-border transition">
+                  <p className="text-sm font-semibold text-foreground">Most Active Day</p>
+                  <p className="text-2xl font-bold text-primary">
+                    {engagementSummary.most_active_day}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {engagementSummary.most_active_count} emails received
+                  </p>
+                </div>
+                <div className="space-y-3 p-4 bg-secondary/20 rounded-lg border border-border/30 hover:border-border transition">
+                  <p className="text-sm font-semibold text-foreground">Quietest Day</p>
+                  <p className="text-2xl font-bold text-primary">
+                    {engagementSummary.quietest_day}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {engagementSummary.quietest_count} emails received
+                  </p>
+                </div>
+                <div className="space-y-3 p-4 bg-secondary/20 rounded-lg border border-border/30 hover:border-border transition">
+                  <p className="text-sm font-semibold text-foreground">Avg Processing Speed</p>
+                  <p className="text-2xl font-bold text-primary">
+                    {(engagementSummary.avg_processing_ms / 1000).toFixed(2)} sec
+                  </p>
+                  <p className="text-xs text-muted-foreground">Per email analysis</p>
+                </div>
+              </>
+            )}
           </div>
         </Card>
       </div>
