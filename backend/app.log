@@ -2010,3 +2010,168 @@ LINE 1: INSERT INTO task (title, description, status, priority, due_...
 2026-02-18 08:54:49,572 [INFO] app.db.init_db: Running Alembic migrations... (SKIPPED for debugging)
 2026-02-18 08:54:49,572 [INFO] app.db.init_db: Alembic migrations skipped.
 2026-02-18 08:54:49,572 [WARNING] app.main: APScheduler not installed. Background sync disabled. Install with: pip install apscheduler
+2026-02-18 19:34:29,503 [INFO] app.main: Initializing Database...
+2026-02-18 19:34:29,741 [INFO] app.db.init_db: Database mailos already exists.
+2026-02-18 19:34:29,741 [INFO] app.db.init_db: Running Alembic migrations... (SKIPPED for debugging)
+2026-02-18 19:34:29,742 [INFO] app.db.init_db: Alembic migrations skipped.
+2026-02-18 19:34:29,742 [WARNING] app.main: APScheduler not installed. Background sync disabled. Install with: pip install apscheduler
+2026-02-18 19:38:41,442 [INFO] app.main: Initializing Database...
+2026-02-18 19:38:41,652 [INFO] app.db.init_db: Database mailos already exists.
+2026-02-18 19:38:41,653 [INFO] app.db.init_db: Running Alembic migrations... (SKIPPED for debugging)
+2026-02-18 19:38:41,654 [INFO] app.db.init_db: Alembic migrations skipped.
+2026-02-18 19:38:41,655 [WARNING] app.main: APScheduler not installed. Background sync disabled. Install with: pip install apscheduler
+2026-02-18 19:40:15,974 [INFO] app.main: Initializing Database...
+2026-02-18 19:40:16,124 [INFO] app.db.init_db: Database mailos already exists.
+2026-02-18 19:40:16,125 [INFO] app.db.init_db: Running Alembic migrations... (SKIPPED for debugging)
+2026-02-18 19:40:16,126 [INFO] app.db.init_db: Alembic migrations skipped.
+2026-02-18 19:40:16,127 [WARNING] app.main: APScheduler not installed. Background sync disabled. Install with: pip install apscheduler
+2026-02-18 19:40:21,439 [INFO] app.main: Initializing Database...
+2026-02-18 19:40:21,520 [INFO] app.db.init_db: Database mailos already exists.
+2026-02-18 19:40:21,520 [INFO] app.db.init_db: Running Alembic migrations... (SKIPPED for debugging)
+2026-02-18 19:40:21,520 [INFO] app.db.init_db: Alembic migrations skipped.
+2026-02-18 19:40:21,521 [WARNING] app.main: APScheduler not installed. Background sync disabled. Install with: pip install apscheduler
+2026-02-18 19:41:12,742 [INFO] app.services.gmail_service: GmailService: Creating new service instance for thread AnyIO worker thread
+2026-02-18 19:41:15,092 [INFO] app.services.gmail_service: GmailService: Applied label Label_5 to message 19c50ad8e3269186
+2026-02-18 19:50:00,212 [INFO] app.api.v1.endpoints.gmail: Initiating two-phase sync for user 4c88f62b-f8d9-4028-8079-1ac1ba1fc2c8 (mode=full, limit=50)
+2026-02-18 19:50:00,213 [INFO] app.services.sync_manager: SyncManager: Sync started for user 4c88f62b-f8d9-4028-8079-1ac1ba1fc2c8 (type=full)
+2026-02-18 19:50:00,216 [INFO] app.api.v1.endpoints.gmail: [SYNC] Starting two-phase sync for user 4c88f62b-f8d9-4028-8079-1ac1ba1fc2c8
+2026-02-18 19:50:00,224 [INFO] app.services.sync_manager: SyncManager: Phase 'fetching' for user 4c88f62b-f8d9-4028-8079-1ac1ba1fc2c8 — Connecting to Gmail...
+2026-02-18 19:50:00,224 [INFO] app.api.v1.endpoints.gmail: [SYNC] Full sync (limit=50)
+2026-02-18 19:50:00,225 [INFO] app.services.gmail_service: GmailService: Fetching preview emails with limit 50
+2026-02-18 19:50:00,226 [INFO] app.services.gmail_service: GmailService: Creating new service instance for thread AnyIO worker thread
+2026-02-18 19:50:02,161 [INFO] app.services.gmail_service: GmailService: Found 30 message IDs
+2026-02-18 19:50:02,161 [INFO] app.services.gmail_service: Fetching 30 messages concurrently...
+2026-02-18 19:50:02,162 [INFO] app.services.gmail_service: GmailService: Creating new service instance for thread ThreadPoolExecutor-0_0
+2026-02-18 19:50:02,163 [INFO] app.services.gmail_service: GmailService: Creating new service instance for thread ThreadPoolExecutor-0_1
+2026-02-18 19:50:02,164 [INFO] app.services.gmail_service: GmailService: Creating new service instance for thread ThreadPoolExecutor-0_2
+2026-02-18 19:50:02,172 [INFO] app.services.gmail_service: GmailService: Creating new service instance for thread ThreadPoolExecutor-0_3
+2026-02-18 19:50:02,173 [INFO] app.services.gmail_service: GmailService: Creating new service instance for thread ThreadPoolExecutor-0_4
+2026-02-18 19:50:02,175 [INFO] app.services.gmail_service: GmailService: Creating new service instance for thread ThreadPoolExecutor-0_5
+2026-02-18 19:50:02,197 [INFO] app.services.gmail_service: GmailService: Creating new service instance for thread ThreadPoolExecutor-0_6
+2026-02-18 19:50:02,205 [INFO] app.services.gmail_service: GmailService: Creating new service instance for thread ThreadPoolExecutor-0_7
+2026-02-18 19:50:02,213 [INFO] app.services.gmail_service: GmailService: Creating new service instance for thread ThreadPoolExecutor-0_8
+2026-02-18 19:50:02,216 [INFO] app.services.gmail_service: GmailService: Creating new service instance for thread ThreadPoolExecutor-0_9
+2026-02-18 19:50:07,434 [INFO] app.services.gmail_service: GmailService: Concurrently fetched 30/30 messages in 5.3s (0 failed)
+2026-02-18 19:50:07,434 [INFO] app.api.v1.endpoints.gmail: [SYNC] Fetch complete: 30 emails in 7.2s
+2026-02-18 19:50:07,435 [INFO] app.services.sync_manager: SyncManager: Phase 'storing_raw' for user 4c88f62b-f8d9-4028-8079-1ac1ba1fc2c8 — Storing 30 raw emails...
+2026-02-18 19:50:07,599 [INFO] app.api.v1.endpoints.gmail: [SYNC] Stored raw: 30 new, 0 skipped
+2026-02-18 19:50:07,613 [INFO] app.api.v1.endpoints.gmail: [SYNC] Starting classification phase for 4c88f62b-f8d9-4028-8079-1ac1ba1fc2c8
+2026-02-18 19:50:07,620 [INFO] app.services.email_processor: EmailProcessor: Found 30 pending emails to classify
+2026-02-18 19:50:07,621 [INFO] app.services.sync_manager: SyncManager: Phase 'classifying' for user 4c88f62b-f8d9-4028-8079-1ac1ba1fc2c8 — Classifying 30 emails...
+2026-02-18 19:50:07,644 [INFO] app.services.email_processor: EmailProcessor: Classifying chunk 1/6
+2026-02-18 19:50:07,649 [INFO] app.services.sync_manager: SyncManager: Phase 'classifying' for user 4c88f62b-f8d9-4028-8079-1ac1ba1fc2c8 — AI classifying chunk 1/6...
+2026-02-18 19:50:07,650 [INFO] app.core.ai: AI: Batch classification (REST API) — 5 emails
+2026-02-18 19:50:11,099 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:50:28,803 [WARNING] app.core.ai: AI: Batch parse mismatch — expected 5, got 1. Falling back.
+2026-02-18 19:50:28,804 [ERROR] app.core.ai: AI: Batch classification failed: Batch response count mismatch. Falling back to individual classification.
+2026-02-18 19:50:31,211 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:50:42,177 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:50:47,167 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:50:54,274 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:50:59,149 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:51:05,691 [INFO] app.services.email_processor: EmailProcessor: Classifying chunk 2/6
+2026-02-18 19:51:05,695 [INFO] app.services.sync_manager: SyncManager: Phase 'classifying' for user 4c88f62b-f8d9-4028-8079-1ac1ba1fc2c8 — AI classifying chunk 2/6...
+2026-02-18 19:51:05,695 [INFO] app.core.ai: AI: Batch classification (REST API) — 5 emails
+2026-02-18 19:51:08,277 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:51:15,806 [WARNING] app.core.ai: AI: Batch parse mismatch — expected 5, got 1. Falling back.
+2026-02-18 19:51:15,808 [ERROR] app.core.ai: AI: Batch classification failed: Batch response count mismatch. Falling back to individual classification.
+2026-02-18 19:51:19,007 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:51:25,874 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:51:33,599 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:51:38,906 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:51:43,487 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:51:47,649 [INFO] app.services.email_processor: EmailProcessor: Classifying chunk 3/6
+2026-02-18 19:51:47,653 [INFO] app.services.sync_manager: SyncManager: Phase 'classifying' for user 4c88f62b-f8d9-4028-8079-1ac1ba1fc2c8 — AI classifying chunk 3/6...
+2026-02-18 19:51:47,654 [INFO] app.core.ai: AI: Batch classification (REST API) — 5 emails
+2026-02-18 19:51:50,223 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:51:54,656 [WARNING] app.core.ai: AI: Batch parse mismatch — expected 5, got 1. Falling back.
+2026-02-18 19:51:54,657 [ERROR] app.core.ai: AI: Batch classification failed: Batch response count mismatch. Falling back to individual classification.
+2026-02-18 19:51:57,001 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:52:02,714 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:52:06,517 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:52:11,744 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:52:16,130 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:52:21,999 [INFO] app.services.email_processor: EmailProcessor: Classifying chunk 4/6
+2026-02-18 19:52:22,003 [INFO] app.services.sync_manager: SyncManager: Phase 'classifying' for user 4c88f62b-f8d9-4028-8079-1ac1ba1fc2c8 — AI classifying chunk 4/6...
+2026-02-18 19:52:22,003 [INFO] app.core.ai: AI: Batch classification (REST API) — 5 emails
+2026-02-18 19:52:23,905 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:52:24,996 [WARNING] app.core.ai: AI: Batch parse mismatch — expected 5, got 1. Falling back.
+2026-02-18 19:52:24,997 [ERROR] app.core.ai: AI: Batch classification failed: Batch response count mismatch. Falling back to individual classification.
+2026-02-18 19:52:28,139 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:52:35,293 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:52:39,455 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:52:44,938 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:52:52,392 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:52:54,040 [INFO] app.services.email_processor: EmailProcessor: Classifying chunk 5/6
+2026-02-18 19:52:54,043 [INFO] app.services.sync_manager: SyncManager: Phase 'classifying' for user 4c88f62b-f8d9-4028-8079-1ac1ba1fc2c8 — AI classifying chunk 5/6...
+2026-02-18 19:52:54,043 [INFO] app.core.ai: AI: Batch classification (REST API) — 5 emails
+2026-02-18 19:52:56,191 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:52:59,377 [WARNING] app.core.ai: AI: Batch parse mismatch — expected 5, got 1. Falling back.
+2026-02-18 19:52:59,377 [ERROR] app.core.ai: AI: Batch classification failed: Batch response count mismatch. Falling back to individual classification.
+2026-02-18 19:53:01,659 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:53:06,365 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:53:10,810 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:53:15,094 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:53:22,177 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:53:34,048 [INFO] app.services.email_processor: EmailProcessor: Classifying chunk 6/6
+2026-02-18 19:53:34,052 [INFO] app.services.sync_manager: SyncManager: Phase 'classifying' for user 4c88f62b-f8d9-4028-8079-1ac1ba1fc2c8 — AI classifying chunk 6/6...
+2026-02-18 19:53:34,053 [INFO] app.core.ai: AI: Batch classification (REST API) — 5 emails
+2026-02-18 19:53:35,771 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:53:55,089 [WARNING] app.core.ai: AI: Batch parse mismatch — expected 5, got 1. Falling back.
+2026-02-18 19:53:55,089 [ERROR] app.core.ai: AI: Batch classification failed: Batch response count mismatch. Falling back to individual classification.
+2026-02-18 19:53:57,018 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:54:04,698 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:54:09,894 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:54:13,978 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:54:20,756 [INFO] httpx: HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-02-18 19:54:24,920 [INFO] app.services.email_processor: EmailProcessor: AI classification complete in 257.3s
+2026-02-18 19:54:24,925 [INFO] app.services.sync_manager: SyncManager: Phase 'storing_results' for user 4c88f62b-f8d9-4028-8079-1ac1ba1fc2c8 — Saving classification results...
+2026-02-18 19:54:25,287 [INFO] app.api.v1.endpoints.gmail: [SYNC] Classification complete: 30 classified, 0 failed
+2026-02-18 19:54:25,288 [INFO] app.services.sync_manager: SyncManager: Sync completed for user 4c88f62b-f8d9-4028-8079-1ac1ba1fc2c8 in 265.1s — stored=0, skipped=0, failed=0
+2026-02-18 19:54:37,640 [INFO] app.main: Initializing Database...
+2026-02-18 19:54:37,816 [INFO] app.db.init_db: Database mailos already exists.
+2026-02-18 19:54:37,817 [INFO] app.db.init_db: Running Alembic migrations... (SKIPPED for debugging)
+2026-02-18 19:54:37,818 [INFO] app.db.init_db: Alembic migrations skipped.
+2026-02-18 19:54:37,820 [WARNING] app.main: APScheduler not installed. Background sync disabled. Install with: pip install apscheduler
+2026-02-18 19:57:15,998 [INFO] app.api.v1.endpoints.gmail: Initiating two-phase sync for user 4c88f62b-f8d9-4028-8079-1ac1ba1fc2c8 (mode=full, limit=50)
+2026-02-18 19:57:16,000 [INFO] app.services.sync_manager: SyncManager: Sync started for user 4c88f62b-f8d9-4028-8079-1ac1ba1fc2c8 (type=full)
+2026-02-18 19:57:16,004 [INFO] app.api.v1.endpoints.gmail: [SYNC] Starting two-phase sync for user 4c88f62b-f8d9-4028-8079-1ac1ba1fc2c8
+2026-02-18 19:57:16,026 [INFO] app.services.sync_manager: SyncManager: Phase 'fetching' for user 4c88f62b-f8d9-4028-8079-1ac1ba1fc2c8 — Connecting to Gmail...
+2026-02-18 19:57:16,027 [INFO] app.api.v1.endpoints.gmail: [SYNC] Full sync (limit=50)
+2026-02-18 19:57:16,028 [INFO] app.services.gmail_service: GmailService: Fetching preview emails with limit 50
+2026-02-18 19:57:16,029 [INFO] app.services.gmail_service: GmailService: Creating new service instance for thread AnyIO worker thread
+2026-02-18 19:57:18,398 [INFO] app.services.gmail_service: GmailService: Found 30 message IDs
+2026-02-18 19:57:18,400 [INFO] app.services.gmail_service: Fetching 30 messages concurrently...
+2026-02-18 19:57:18,404 [INFO] app.services.gmail_service: GmailService: Creating new service instance for thread ThreadPoolExecutor-0_0
+2026-02-18 19:57:18,407 [INFO] app.services.gmail_service: GmailService: Creating new service instance for thread ThreadPoolExecutor-0_1
+2026-02-18 19:57:18,410 [INFO] app.services.gmail_service: GmailService: Creating new service instance for thread ThreadPoolExecutor-0_2
+2026-02-18 19:57:18,418 [INFO] app.services.gmail_service: GmailService: Creating new service instance for thread ThreadPoolExecutor-0_3
+2026-02-18 19:57:18,432 [INFO] app.services.gmail_service: GmailService: Creating new service instance for thread ThreadPoolExecutor-0_4
+2026-02-18 19:57:18,469 [INFO] app.services.gmail_service: GmailService: Creating new service instance for thread ThreadPoolExecutor-0_5
+2026-02-18 19:57:18,505 [INFO] app.services.gmail_service: GmailService: Creating new service instance for thread ThreadPoolExecutor-0_6
+2026-02-18 19:57:18,524 [INFO] app.services.gmail_service: GmailService: Creating new service instance for thread ThreadPoolExecutor-0_7
+2026-02-18 19:57:18,555 [INFO] app.services.gmail_service: GmailService: Creating new service instance for thread ThreadPoolExecutor-0_8
+2026-02-18 19:57:18,588 [INFO] app.services.gmail_service: GmailService: Creating new service instance for thread ThreadPoolExecutor-0_9
+2026-02-18 19:57:25,541 [INFO] app.services.gmail_service: GmailService: Concurrently fetched 30/30 messages in 7.1s (0 failed)
+2026-02-18 19:57:25,542 [INFO] app.api.v1.endpoints.gmail: [SYNC] Fetch complete: 30 emails in 9.5s
+2026-02-18 19:57:25,543 [INFO] app.services.sync_manager: SyncManager: Phase 'storing_raw' for user 4c88f62b-f8d9-4028-8079-1ac1ba1fc2c8 — Storing 30 raw emails...
+2026-02-18 19:57:25,588 [INFO] app.api.v1.endpoints.gmail: [SYNC] Stored raw: 0 new, 30 skipped
+2026-02-18 19:57:25,605 [INFO] app.api.v1.endpoints.gmail: [SYNC] Starting classification phase for 4c88f62b-f8d9-4028-8079-1ac1ba1fc2c8
+2026-02-18 19:57:25,610 [INFO] app.services.email_processor: EmailProcessor: No pending emails to classify for user 4c88f62b-f8d9-4028-8079-1ac1ba1fc2c8
+2026-02-18 19:57:25,611 [INFO] app.api.v1.endpoints.gmail: [SYNC] Classification complete: 0 classified, 0 failed
+2026-02-18 19:57:25,612 [INFO] app.services.sync_manager: SyncManager: Sync completed for user 4c88f62b-f8d9-4028-8079-1ac1ba1fc2c8 in 9.6s — stored=0, skipped=0, failed=0
+2026-02-18 20:04:01,249 [INFO] app.main: Initializing Database...
+2026-02-18 20:04:01,365 [INFO] app.db.init_db: Database mailos already exists.
+2026-02-18 20:04:01,365 [INFO] app.db.init_db: Running Alembic migrations... (SKIPPED for debugging)
+2026-02-18 20:04:01,366 [INFO] app.db.init_db: Alembic migrations skipped.
+2026-02-18 20:04:01,366 [WARNING] app.main: APScheduler not installed. Background sync disabled. Install with: pip install apscheduler
+2026-02-18 20:04:06,248 [INFO] app.main: Initializing Database...
+2026-02-18 20:04:06,351 [INFO] app.db.init_db: Database mailos already exists.
+2026-02-18 20:04:06,352 [INFO] app.db.init_db: Running Alembic migrations... (SKIPPED for debugging)
+2026-02-18 20:04:06,352 [INFO] app.db.init_db: Alembic migrations skipped.
+2026-02-18 20:04:06,353 [WARNING] app.main: APScheduler not installed. Background sync disabled. Install with: pip install apscheduler
+2026-02-18 20:09:08,418 [INFO] app.main: Initializing Database...
+2026-02-18 20:09:08,498 [INFO] app.db.init_db: Database mailos already exists.
+2026-02-18 20:09:08,499 [INFO] app.db.init_db: Running Alembic migrations... (SKIPPED for debugging)
+2026-02-18 20:09:08,499 [INFO] app.db.init_db: Alembic migrations skipped.
+2026-02-18 20:09:08,500 [WARNING] app.main: APScheduler not installed. Background sync disabled. Install with: pip install apscheduler

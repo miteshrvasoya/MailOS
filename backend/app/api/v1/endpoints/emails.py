@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from app.api import deps
 from app.models.email import EmailInsight
+from app.models.user import User
 
 import uuid
 
@@ -10,12 +11,41 @@ router = APIRouter()
 
 @router.get("/", response_model=List[EmailInsight])
 def read_emails(
-    skip: int = 0, 
-    limit: int = 100, 
+    skip: int = 0,
+    limit: int = 100,
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_user) # Used
+    current_user: User = Depends(deps.get_current_user),
 ):
-    emails = db.exec(select(EmailInsight).where(EmailInsight.user_id == current_user.id).offset(skip).limit(limit)).all()
+    """Generic email listing for the current user (paginated)."""
+    emails = db.exec(
+        select(EmailInsight)
+        .where(EmailInsight.user_id == current_user.id)
+        .offset(skip)
+        .limit(limit)
+    ).all()
+    return emails
+
+
+@router.get("/important", response_model=List[EmailInsight])
+def read_important_emails(
+    limit: int = 5,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    """
+    Return the most important recent emails for the dashboard.
+    Importance is based on importance_score (> 0.7) and recency.
+    """
+    stmt = (
+        select(EmailInsight)
+        .where(
+            EmailInsight.user_id == current_user.id,
+            EmailInsight.importance_score > 0.7,
+        )
+        .order_by(EmailInsight.sent_at.desc())
+        .limit(limit)
+    )
+    emails = db.exec(stmt).all()
     return emails
 
 @router.post("/", response_model=EmailInsight)
@@ -55,7 +85,6 @@ from typing import Optional
 from app.core.ai import classify_email
 from app.services.grouping import assign_group
 from app.models.notification import Notification, NotificationCategory, NotificationPriority
-# from app.models.user import User # Already imported via dependency result usually, but good to keep inputs clean
 
 class EmailInput(BaseModel):
     user_id: uuid.UUID

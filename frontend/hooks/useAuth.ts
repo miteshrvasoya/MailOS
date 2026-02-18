@@ -75,12 +75,17 @@ export function useAuth() {
   // 1. During initial hydration from localStorage
   // 2. While next-auth session is loading
   // 3. If next-auth is authenticated but we haven't synced the user to state yet
-  const isLoading = !isHydrated || status === 'loading' || (status === 'authenticated' && !user)
+  const isLoading =
+    !isHydrated || status === 'loading' || (status === 'authenticated' && !user)
+
+  // Treat next-auth session as the source of truth for auth;
+  // localStorage/user state only refines the details (id, name, etc.)
+  const isAuthenticated = status === 'authenticated' && !!user?.id
 
   return {
     user,
     userId: user?.id || null,
-    isAuthenticated: !!user?.id,
+    isAuthenticated,
     isLoading,
     signOut,
   }

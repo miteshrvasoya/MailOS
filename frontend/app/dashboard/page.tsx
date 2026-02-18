@@ -19,6 +19,7 @@ export default function DashboardPage() {
   const [scanning, setScanning] = useState(false)
   const [syncProgress, setSyncProgress] = useState('')
   const pollRef = useRef<NodeJS.Timeout | null>(null)
+  const [digestPreviewSections, setDigestPreviewSections] = useState<{ category: string; count: number }[]>([])
   
   const [stats, setStats] = useState([
     { label: 'Emails processed today', value: '0', icon: Mail },
@@ -56,7 +57,9 @@ export default function DashboardPage() {
           if (!userId) return
           
           try {
-              const res = await api.get(`/gmail/sync/status/${userId}`)
+              const res = await api.get(`/gmail/sync/status/${userId}`, {
+                params: { user_id: userId },
+              })
               const status = res.data
               
               if (status.status === 'running') {
@@ -82,13 +85,15 @@ export default function DashboardPage() {
           } catch (e) {
               console.error("Poll failed", e)
           }
-      }, 1000)
+      }, 10000)
   }
 
   const checkSyncStatus = async () => {
       if (!userId) return
       try {
-          const res = await api.get(`/gmail/sync/status/${userId}`)
+          const res = await api.get(`/gmail/sync/status/${userId}`, {
+            params: { user_id: userId },
+          })
           if (res.data?.status === 'running') {
               setScanning(true)
               setSyncProgress(res.data.message || 'Resuming sync...')
@@ -100,22 +105,32 @@ export default function DashboardPage() {
   }
 
   const fetchDashboardData = async () => {
+    if (!userId) return
+
     setLoading(true)
     try {
-      const [statsRes, emailsRes] = await Promise.all([
-        api.get('/dashboard/stats', { params: { user_id: userId } }),
-        api.get('/emails', { params: { limit: 5, user_id: userId } })
-      ])
-      
-      const s = statsRes.data
+      const res = await api.get('/dashboard/overview', { params: { user_id: userId } })
+      const { stats: s, important_emails, digest_preview } = res.data
+
       setStats([
-        { label: 'Emails processed today', value: s.total_emails.toString(), icon: Mail },
+        { label: 'Emails processed', value: s.total_emails.toString(), icon: Mail },
         { label: 'Important detected', value: s.important_emails.toString(), icon: AlertCircle },
-        { label: 'Groups created', value: s.active_rules.toString(), icon: TrendingUp },
-        { label: 'AI confidence', value: `${s.ai_confidence}%`, icon: Zap },
+        { label: 'Active rules', value: s.active_rules.toString(), icon: TrendingUp },
+        { label: 'AI confidence', value: `${(s.ai_confidence ?? 0).toFixed?.(1) ?? s.ai_confidence}%`, icon: Zap },
       ])
-      
-      setEmails(emailsRes.data)
+
+      setEmails(important_emails || [])
+
+      if (digest_preview?.sections && Array.isArray(digest_preview.sections)) {
+        setDigestPreviewSections(
+          digest_preview.sections.map((s: any) => ({
+            category: s.category,
+            count: s.count,
+          })),
+        )
+      } else {
+        setDigestPreviewSections([])
+      }
     } catch (error) {
       console.error("Failed to fetch dashboard data", error)
     } finally {
@@ -139,10 +154,17 @@ export default function DashboardPage() {
       try {
           trackEvent({ action: 'scan_gmail', category: AnalyticsCategories.DASHBOARD, label: 'manual_scan' })
           
-          await api.post('/gmail/sync', { 
-            user_id: userId,
-            mode: 'full'
-          });
+          await api.post(
+            '/gmail/sync',
+            { 
+              user_id: userId,
+              mode: 'full'
+            },
+            {
+              // Ensure FastAPI auth dependency sees the user ID via query param
+              params: { user_id: userId },
+            }
+          );
           
           // Start polling immediately
           startPolling()
@@ -187,7 +209,12 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-semibold text-foreground">Important Emails</h2>
             <Button variant="ghost" asChild className="text-primary hover:text-primary/80 hover:bg-transparent">
-              <Link href="/dashboard/groups" className="flex items-center gap-2" onClick={() => trackEvent({ action: 'view_all_important', category: AnalyticsCategories.DASHBOARD })}>
+              <Link
+                href="/dashboard/groups"
+                prefetch={false}
+                className="flex items-center gap-2"
+                onClick={() => trackEvent({ action: 'view_all_important', category: AnalyticsCategories.DASHBOARD })}
+              >
                 View all <ArrowRight className="w-4 h-4" />
               </Link>
             </Button>
@@ -195,26 +222,54 @@ export default function DashboardPage() {
           
           <div className="space-y-3">
             {loading ? (
-                <p className="text-muted-foreground">Loading emails...</p>
-            ) : emails.map((email, idx) => (
-              <div key={email.id} style={{ animationDelay: `${idx * 0.1}s` }} className="animate-slide-up">
-                <Card className="p-5 card-hover border-border/50 hover:border-border cursor-pointer group">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <p className="font-semibold text-foreground group-hover:text-primary transition">{email.subject}</p>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        From <span className="text-foreground/70">{email.sender}</span> • {new Date(email.sent_at).toLocaleTimeString([], { hour: '2-digit', minute:'2-digit' })}
-                      </p>
+              <p className="text-muted-foreground">Loading emails...</p>
+            ) : emails.length === 0 ? (
+              <p className="text-muted-foreground">No important emails detected yet.</p>
+            ) : (
+              emails.map((email, idx) => (
+                <div
+                  key={email.id}
+                  style={{ animationDelay: `${idx * 0.1}s` }}
+                  className="animate-slide-up"
+                >
+                  <Card className="p-5 card-hover border-border/50 hover:border-border cursor-pointer group">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <p className="font-semibold text-foreground group-hover:text-primary transition">
+                          {email.subject}
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          From{' '}
+                          <span className="text-foreground/70">{email.sender}</span> •{' '}
+                          {new Date(email.sent_at).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </p>
+                      </div>
+                      <div className="flex gap-2 flex-shrink-0">
+                        <Button
+                          asChild
+                          size="sm"
+                          className="bg-primary hover:bg-primary/90 text-background font-medium cta-button"
+                          onClick={() =>
+                            trackEvent({
+                              action: 'view_email_details',
+                              category: AnalyticsCategories.DASHBOARD,
+                              label: email.id,
+                            })
+                          }
+                        >
+                          <Link href={`/dashboard/emails/${email.id}`} prefetch={false}>
+                            View Details
+                          </Link>
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex gap-2 flex-shrink-0">
-                      <Button asChild size="sm" className="bg-primary hover:bg-primary/90 text-background font-medium cta-button" onClick={() => trackEvent({ action: 'view_email_details', category: AnalyticsCategories.DASHBOARD, label: email.id })}>
-                        <Link href={`/dashboard/emails/${email.id}`} prefetch={false}>View Details</Link>
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-            ))}
+                  </Card>
+                </div>
+              ))
+            )}
           </div>
         </div>
         
@@ -223,18 +278,34 @@ export default function DashboardPage() {
           <div className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
             <h2 className="text-2xl font-semibold mb-6 text-foreground">Today's Digest Preview</h2>
             <div className="space-y-3">
-              {[
-                  { category: '💼 Work', count: 8 },
-                  { category: '💰 Finance', count: 3 },
-                  { category: '📰 Newsletters', count: 12 },
-                ].map((item, i) => (
-                <Card key={i} className="p-4 card-hover border-border/50 hover:border-border flex items-center justify-between group cursor-pointer">
-                  <span className="font-medium text-foreground">{item.category}</span>
-                  <span className="text-xs font-semibold bg-secondary/80 group-hover:bg-secondary text-foreground px-3 py-1.5 rounded-full transition">
-                    {item.count} emails
-                  </span>
-                </Card>
-              ))}
+              {/* If backend digest preview is available, prefer that; fallback to illustrative data */}
+              {digestPreviewSections.length > 0
+                ? digestPreviewSections.map((section, i) => (
+                    <Card
+                      key={i}
+                      className="p-4 card-hover border-border/50 hover:border-border flex items-center justify-between group cursor-pointer"
+                    >
+                      <span className="font-medium text-foreground">{section.category}</span>
+                      <span className="text-xs font-semibold bg-secondary/80 group-hover:bg-secondary text-foreground px-3 py-1.5 rounded-full transition">
+                        {section.count} emails
+                      </span>
+                    </Card>
+                  ))
+                : [
+                    { category: '💼 Work', count: 8 },
+                    { category: '💰 Finance', count: 3 },
+                    { category: '📰 Newsletters', count: 12 },
+                  ].map((item, i) => (
+                    <Card
+                      key={i}
+                      className="p-4 card-hover border-border/50 hover:border-border flex items-center justify-between group cursor-pointer"
+                    >
+                      <span className="font-medium text-foreground">{item.category}</span>
+                      <span className="text-xs font-semibold bg-secondary/80 group-hover:bg-secondary text-foreground px-3 py-1.5 rounded-full transition">
+                        {item.count} emails
+                      </span>
+                    </Card>
+                  ))}
             </div>
           </div>
           

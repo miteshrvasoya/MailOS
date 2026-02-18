@@ -34,24 +34,23 @@ class ActionResponse(BaseModel):
 
 @router.get("/pending", response_model=List[ActionResponse])
 def get_pending_actions(db: Session = Depends(deps.get_db)):
-    """Fetch pending AI suggestions (kept for backward compat)."""
+    """Fetch pending AI suggestions (global, backward compatible)."""
     return _get_pending_list(db)
 
 
-@router.get("/pending", response_model=List[ActionResponse])
+@router.get("/pending-list", response_model=List[ActionResponse])
 def get_pending_actions_list(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user)
 ):
     """
-    Fetch pending AI suggestions with email data.
+    Fetch pending AI suggestions for the authenticated user with email data.
     """
-    # Uses current_user.id
     pending_actions = _get_pending_list(db, user_id=current_user.id)
     
     response = []
     for action in pending_actions:
-        if not action.email: # Skip if email data is missing (should not happen)
+        if not action.email:  # Skip if email data is missing (should not happen)
             continue
             
         response.append(ActionResponse(
@@ -81,13 +80,9 @@ def _get_pending_list(db: Session, user_id: uuid.UUID = None) -> List[EmailActio
 @router.post("/{action_id}/approve", response_model=ActionResponse)
 def approve_action(
     action_id: uuid.UUID,
-    user_id: uuid.UUID,
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user)
 ):
-    if user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized")
-        
     action = db.get(EmailAction, action_id)
     if not action:
         raise HTTPException(status_code=404, detail="Action not found")
@@ -141,13 +136,9 @@ def approve_action(
 @router.post("/{action_id}/reject", response_model=ActionResponse)
 def reject_action(
     action_id: uuid.UUID,
-    user_id: uuid.UUID,
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user)
 ):
-    if user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized")
-
     action = db.get(EmailAction, action_id)
     if not action:
         raise HTTPException(status_code=404, detail="Action not found")
@@ -219,10 +210,9 @@ def undo_action(
     return {"status": "undone", "previous_status": previous_status}
 
 
-# ─── Bulk Approve ─────────────────────────────────────────────────
+# ─── Bulk Approve / Reject ────────────────────────────────────────
 
 class BulkActionRequest(BaseModel):
-    user_id: uuid.UUID
     action_ids: List[uuid.UUID]
 
 
@@ -237,10 +227,7 @@ def bulk_approve(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user)
 ):
-    """Approve multiple suggestions at once."""
-    if req.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized")
-
+    """Approve multiple suggestions at once for the authenticated user."""
     succeeded = []
     failed = []
 
@@ -287,10 +274,7 @@ def bulk_reject(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user)
 ):
-    """Reject multiple suggestions at once."""
-    if req.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized")
-
+    """Reject multiple suggestions at once for the authenticated user."""
     succeeded = []
     failed = []
 
