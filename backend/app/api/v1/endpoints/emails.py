@@ -10,28 +10,44 @@ router = APIRouter()
 
 @router.get("/", response_model=List[EmailInsight])
 def read_emails(
-    user_id: uuid.UUID,
     skip: int = 0, 
     limit: int = 100, 
-    db: Session = Depends(deps.get_db)
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user) # Used
 ):
-    emails = db.exec(select(EmailInsight).where(EmailInsight.user_id == user_id).offset(skip).limit(limit)).all()
+    emails = db.exec(select(EmailInsight).where(EmailInsight.user_id == current_user.id).offset(skip).limit(limit)).all()
     return emails
 
 @router.post("/", response_model=EmailInsight)
-def create_email_insight(email_insight: EmailInsight, db: Session = Depends(deps.get_db)):
+def create_email_insight(
+    email_insight: EmailInsight, 
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    if email_insight.user_id != current_user.id:
+         raise HTTPException(status_code=403, detail="Not authorized to create insight for another user")
+         
     db.add(email_insight)
     db.commit()
     db.refresh(email_insight)
     return email_insight
 
 @router.get("/{email_id}", response_model=EmailInsight)
-def read_email(email_id: str, db: Session = Depends(deps.get_db)):
+def read_email(
+    email_id: uuid.UUID, 
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
     email = db.get(EmailInsight, email_id)
     if not email:
         raise HTTPException(status_code=404, detail="Email insight not found")
+        
+    if email.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to view this email")
+        
     return email
 
+# ... (Imports remain same, omitted for brevity if no change needed, but better to keep context if simple)
 from pydantic import BaseModel
 from datetime import datetime
 import uuid
@@ -39,6 +55,7 @@ from typing import Optional
 from app.core.ai import classify_email
 from app.services.grouping import assign_group
 from app.models.notification import Notification, NotificationCategory, NotificationPriority
+# from app.models.user import User # Already imported via dependency result usually, but good to keep inputs clean
 
 class EmailInput(BaseModel):
     user_id: uuid.UUID
@@ -50,16 +67,20 @@ class EmailInput(BaseModel):
     sent_at: datetime
 
 @router.post("/analyze", response_model=EmailInsight)
-def analyze_email(email_in: EmailInput, db: Session = Depends(deps.get_db)):
+def analyze_email(
+    email_in: EmailInput, 
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
     """
     Analyze a single email using the core pipeline.
     """
-    from app.models.user import User
     from app.services.email_processor import process_email_pipeline
     
-    user = db.get(User, email_in.user_id)
-    if not user:
-         raise HTTPException(status_code=404, detail="User not found")
+    if email_in.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    user = current_user # Use the validated user
 
     # Construct dict for pipeline
     email_data = {
@@ -85,17 +106,21 @@ class SyncResponse(BaseModel):
     auto_applied_count: int
 
 @router.post("/mock-sync", response_model=SyncResponse)
-def simulate_sync(req: SyncRequest, db: Session = Depends(deps.get_db)):
+def simulate_sync(
+    req: SyncRequest, 
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
     """
     Simulation of Gmail Sync for testing and development purposes.
     Generates mock emails and processes them through the pipeline.
     """
-    from app.models.user import User
     from app.services.email_processor import process_email_pipeline
     
-    user = db.get(User, req.user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+    if req.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+        
+    user = current_user
         
     # Generate Mock Emails
     mock_emails = [

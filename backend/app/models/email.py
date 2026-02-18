@@ -38,6 +38,9 @@ class EmailInsight(SQLModel, table=True):
     follow_up_deadline: Optional[datetime] = None  # when the follow-up is due
     waiting_on_reply: bool = Field(default=False)  # True if user is waiting for someone else to reply
     
+    # Sync Status
+    classification_status: str = Field(default="pending")  # pending, classifying, classified, failed
+
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     # Relationships

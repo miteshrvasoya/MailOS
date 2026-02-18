@@ -9,10 +9,15 @@ import uuid
 router = APIRouter()
 
 @router.get("/stats")
-def get_dashboard_stats(user_id: uuid.UUID, db: Session = Depends(deps.get_db)):
+def get_dashboard_stats(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
     """
     Get aggregate statistics for the dashboard.
     """
+    user_id = current_user.id
+
     # 1. Total emails processed
     total_emails = db.exec(select(func.count(EmailInsight.id)).where(EmailInsight.user_id == user_id)).one()
     

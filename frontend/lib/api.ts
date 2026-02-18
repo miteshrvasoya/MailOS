@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getSession } from 'next-auth/react';
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1',
@@ -7,7 +8,19 @@ const api = axios.create({
   },
 });
 
+// Add a request interceptor to inject the user ID from the session
+api.interceptors.request.use(async (config) => {
+  const session = await getSession();
+  if (session?.user?.id) {
+    config.headers['X-User-Id'] = session.user.id;
+  }
+  return config;
+}, (error) => {
+  return Promise.reject(error);
+});
+
 export default api;
+
 
 export interface Task {
   id: string;

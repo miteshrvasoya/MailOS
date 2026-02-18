@@ -7,7 +7,14 @@ from app.db.init_db import init_db
 import logging
 
 # Setup logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[
+        logging.FileHandler("app.log"),
+        logging.StreamHandler()
+    ]
+)
 logger = logging.getLogger(__name__)
 
 # Background scheduler (optional, only starts if apscheduler is installed)

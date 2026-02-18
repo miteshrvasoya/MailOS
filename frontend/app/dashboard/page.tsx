@@ -37,67 +37,35 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (userId) {
-      fetchDashboardData()
-      checkSyncStatus()
-    }
-  }, [userId])
-
-  const stopPolling = () => {
-    if (pollRef.current) {
-        clearInterval(pollRef.current)
-        pollRef.current = null
-    }
-  }
-
-  const startPolling = () => {
-      stopPolling() // Ensure only one poll
-      
-      pollRef.current = setInterval(async () => {
-          if (!userId) return
-          
-          try {
-              const res = await api.get(`/gmail/sync/status/${userId}`)
-              const status = res.data
-              
-              if (status.status === 'running') {
-                  setScanning(true)
-                  setSyncProgress(status.message || 'Syncing...')
-              } else if (status.status === 'completed') {
-                  stopPolling()
-                  setScanning(false)
-                  setSyncProgress('')
-                  // Only show toast if we were actively scanning
-                  toast({ title: "Sync complete", description: status.message })
-                  fetchDashboardData()
-              } else if (status.status === 'error') {
-                  stopPolling()
-                  setScanning(false)
-                  setSyncProgress('')
-                  toast({ title: "Sync failed", description: status.message, variant: "destructive" })
-              } else {
-                  // Idle
-                  setScanning(false)
-                  stopPolling()
-              }
-          } catch (e) {
-              console.error("Poll failed", e)
-          }
-      }, 1000)
-  }
-
+  // DashboardPage changes
   const checkSyncStatus = async () => {
       if (!userId) return
       try {
+          // Single check, no polling
           const res = await api.get(`/gmail/sync/status/${userId}`)
           if (res.data?.status === 'running') {
               setScanning(true)
-              setSyncProgress(res.data.message || 'Resuming sync...')
-              startPolling()
+              setSyncProgress(res.data.message || 'Sync in progress...')
+          } else {
+              setScanning(false)
           }
       } catch (e) {
           // ignore
       }
   }
+
+  useEffect(() => {
+    if (userId) {
+      if (!filter) {
+        fetchDashboardData()
+      }
+      checkSyncStatus()
+      // Only initial check, no interval
+    }
+  }, [userId, filter])
+  
+  // startPolling and stopPolling removed
+
 
   const fetchDashboardData = async () => {
     setLoading(true)
@@ -299,3 +267,4 @@ export default function DashboardPage() {
     </div>
   )
 }
+  }

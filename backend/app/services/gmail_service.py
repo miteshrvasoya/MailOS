@@ -10,6 +10,7 @@ from app.models.gmail_label import GmailLabel
 from app.core.config import settings
 import logging
 import email.utils
+import threading
 from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
@@ -21,12 +22,20 @@ class GmailService:
     def __init__(self, user: User, db: Session):
         self.user = user
         self.db = db
+        self.thread_local = threading.local()
         try:
             self.creds = self._get_credentials()
-            self.service = build('gmail', 'v1', credentials=self.creds)
+            # We don't initialize self.service here anymore; use _get_service() instead
         except Exception as e:
-            logger.error(f"Failed to initialize Gmail service for user {user.id}: {e}")
+            logger.error(f"Failed to initialize Gmail credentials for user {user.id}: {e}")
             raise e
+
+    def _get_service(self):
+        """Thread-safe way to get the Gmail service."""
+        if not hasattr(self.thread_local, 'service'):
+            logger.info(f"GmailService: Creating new service instance for thread {threading.current_thread().name}")
+            self.thread_local.service = build('gmail', 'v1', credentials=self.creds, cache_discovery=False)
+        return self.thread_local.service
 
     def _get_credentials(self) -> Credentials:
         stmt = select(GoogleCredential).where(GoogleCredential.user_id == self.user.id)
@@ -50,7 +59,6 @@ class GmailService:
                 # Update DB with new token
                 cred_model.access_token = creds.token
                 cred_model.updated_at = datetime.utcnow()
-                # Scopes might have changed during refresh if requested? Usually not but good to keep sync.
                 self.db.add(cred_model)
                 self.db.commit()
                 logger.info(f"Refreshed Gmail access token for user {self.user.id}")
@@ -62,12 +70,13 @@ class GmailService:
     def _fetch_single_message(self, msg_id: str) -> Optional[Dict[str, Any]]:
         """Fetch and parse a single Gmail message. Thread-safe."""
         try:
-            full_msg = self.service.users().messages().get(
+            service = self._get_service()
+            full_msg = service.users().messages().get(
                 userId='me', id=msg_id, format='full'
             ).execute()
             return self._parse_message(full_msg)
         except Exception as e:
-            logger.warning(f"Failed to fetch message {msg_id}: {e}")
+            logger.warning(f"GmailService: Failed to fetch message {msg_id}: {e}")
             return None
 
     def _fetch_messages_concurrent(self, message_ids: List[str]) -> List[Dict[str, Any]]:
@@ -78,7 +87,10 @@ class GmailService:
         if not message_ids:
             return []
 
+        import time as _time
+        start = _time.time()
         results: List[Optional[Dict[str, Any]]] = [None] * len(message_ids)
+        failed_count = 0
 
         with ThreadPoolExecutor(max_workers=GMAIL_FETCH_WORKERS) as executor:
             future_to_idx = {
@@ -90,25 +102,32 @@ class GmailService:
                 try:
                     results[idx] = future.result()
                 except Exception as e:
+                    failed_count += 1
                     logger.warning(f"Concurrent fetch error for index {idx}: {e}")
 
-        return [r for r in results if r is not None]
+        fetched = [r for r in results if r is not None]
+        elapsed = _time.time() - start
+        logger.info(f"GmailService: Concurrently fetched {len(fetched)}/{len(message_ids)} messages in {elapsed:.1f}s ({failed_count} failed)")
+        return fetched
 
     def fetch_preview_emails(self, limit: int = 50) -> List[Dict[str, Any]]:
         """
         Fetch recent emails for preview using concurrent fetching.
         """
+        logger.info(f"GmailService: Fetching preview emails with limit {limit}")
         try:
-            results = self.service.users().messages().list(
+            service = self._get_service()
+            results = service.users().messages().list(
                 userId='me', q='newer_than:7d', maxResults=limit
             ).execute()
             messages = results.get('messages', [])
             message_ids = [msg['id'] for msg in messages]
 
+            logger.info(f"GmailService: Found {len(message_ids)} message IDs")
             logger.info(f"Fetching {len(message_ids)} messages concurrently...")
             return self._fetch_messages_concurrent(message_ids)
         except Exception as e:
-            logger.error(f"Gmail API list failed: {e}")
+            logger.error(f"GmailService: Preview sync failed: {e}")
             raise e
 
     def ensure_label(self, name: str) -> str:
@@ -121,14 +140,14 @@ class GmailService:
         # Or always check API to be safe? Safest is check API list.
         
         try:
+            service = self._get_service()
             # List labels
-            response = self.service.users().labels().list(userId='me').execute()
+            response = service.users().labels().list(userId='me').execute()
             labels = response.get('labels', [])
             
             # Check for existing
             for label in labels:
                 if label['name'].lower() == name.lower():
-                    # Update DB cache if missing
                     self._cache_label_in_db(name, label['id'])
                     return label['id']
             
@@ -138,16 +157,13 @@ class GmailService:
                 "labelListVisibility": "labelShow",
                 "messageListVisibility": "show"
             }
-            created_label = self.service.users().labels().create(userId='me', body=label_body).execute()
-            
-            # Cache in DB
+            created_label = service.users().labels().create(userId='me', body=label_body).execute()
             self._cache_label_in_db(name, created_label['id'])
-            
+            logger.info(f"GmailService: Created label '{name}'")
             return created_label['id']
             
         except Exception as e:
-            logger.error(f"Failed to ensure label {name}: {e}")
-            # If scope error, this will raise.
+            logger.error(f"GmailService: Failed to ensure label '{name}': {e}")
             raise e
 
     def _cache_label_in_db(self, name: str, gmail_id: str):
@@ -169,12 +185,14 @@ class GmailService:
         Safe: Does NOT remove labels or archive.
         """
         try:
+            service = self._get_service()
             body = {
                 "addLabelIds": [gmail_label_id]
             }
-            self.service.users().messages().modify(userId='me', id=gmail_message_id, body=body).execute()
+            service.users().messages().modify(userId='me', id=gmail_message_id, body=body).execute()
+            logger.info(f"GmailService: Applied label {gmail_label_id} to message {gmail_message_id}")
         except Exception as e:
-            logger.error(f"Failed to apply label {gmail_label_id} to {gmail_message_id}: {e}")
+            logger.error(f"GmailService: Failed to apply label {gmail_label_id} to {gmail_message_id}: {e}")
             raise e
 
     def _parse_message(self, full_msg: Dict[str, Any]) -> Dict[str, Any]:
@@ -205,10 +223,12 @@ class GmailService:
     def get_profile(self) -> Dict[str, Any]:
         """Get Gmail profile including current historyId."""
         try:
-            profile = self.service.users().getProfile(userId='me').execute()
+            service = self._get_service()
+            profile = service.users().getProfile(userId='me').execute()
+            logger.info(f"GmailService: Profile fetched, historyId={profile.get('historyId')}")
             return profile
         except Exception as e:
-            logger.error(f"Failed to get Gmail profile: {e}")
+            logger.error(f"GmailService: Failed to get Gmail profile: {e}")
             raise e
 
     def fetch_new_emails(self, start_history_id: str) -> tuple:
@@ -217,10 +237,12 @@ class GmailService:
         Returns (list_of_email_dicts, new_history_id).
         Raises HistoryExpiredError if the historyId is too old.
         """
+        logger.info(f"GmailService: Fetching new emails since history_id {start_history_id}")
         try:
             new_message_ids = set()
             page_token = None
             new_history_id = start_history_id
+            page_count = 0
 
             while True:
                 params = {
@@ -231,9 +253,12 @@ class GmailService:
                 if page_token:
                     params['pageToken'] = page_token
 
-                history_response = self.service.users().history().list(**params).execute()
+                service = self._get_service()
+                history_response = service.users().history().list(**params).execute()
                 
                 history_records = history_response.get('history', [])
+                page_count += 1
+                logger.info(f"GmailService: History page {page_count}: {len(history_records)} records")
                 for record in history_records:
                     for msg_added in record.get('messagesAdded', []):
                         msg = msg_added.get('message', {})
@@ -247,16 +272,16 @@ class GmailService:
                     break
 
             # Fetch full details concurrently
-            logger.info(f"Incremental sync: {len(new_message_ids)} new messages, fetching concurrently...")
+            logger.info(f"GmailService: Found {len(new_message_ids)} new message IDs, fetching concurrently...")
             preview_data = self._fetch_messages_concurrent(list(new_message_ids))
             return preview_data, new_history_id
 
         except Exception as e:
             error_str = str(e)
             if '404' in error_str or 'notFound' in error_str:
-                logger.warning("History expired, falling back to full sync")
+                logger.warning("GmailService: History expired, falling back to full sync")
                 raise HistoryExpiredError("Gmail history has expired, full sync required")
-            logger.error(f"Incremental sync failed: {e}")
+            logger.error(f"GmailService: Incremental sync failed: {e}")
             raise e
 
 

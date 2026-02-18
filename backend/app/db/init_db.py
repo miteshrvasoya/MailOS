@@ -32,11 +32,11 @@ def init_db():
 
     # 2. Run Alembic Migrations
     try:
-        logger.info("Running Alembic migrations...")
+        logger.info("Running Alembic migrations... (SKIPPED for debugging)")
         # Assume we are in the root 'backend' directory where alembic.ini is
-        alembic_cfg = config.Config("alembic.ini")
-        command.upgrade(alembic_cfg, "head")
-        logger.info("Alembic migrations applied successfully.")
+        # alembic_cfg = config.Config("alembic.ini")
+        # command.upgrade(alembic_cfg, "head")
+        logger.info("Alembic migrations skipped.")
     except Exception as e:
         logger.error(f"Error running migrations: {e}")
         raise e

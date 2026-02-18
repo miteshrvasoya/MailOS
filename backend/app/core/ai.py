@@ -10,8 +10,11 @@ import json
 import time
 import httpx
 import uuid
+import logging
 from typing import Optional, Dict, Any
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 # ─── Email Preprocessing ─────────────────────────────────────────
@@ -129,12 +132,12 @@ Output JSON Schema:
   "urgency": "low" | "medium" | "high",
   "explanation": "Short reason",
   "tasks": [
-    {
+    {{
         "title": "Actionable task title",
         "priority": "high/medium/low",
         "due_date": "YYYY-MM-DD or null",
         "status": "pending"
-    }
+    }}
   ]
 }}
 
@@ -251,7 +254,7 @@ def classify_emails_batch(
         e = emails[0]
         return [classify_email(e.get("subject", ""), e.get("body", ""), e.get("sender", ""), db=db, user_id=user_id)]
 
-    print(f"Batch Classification (REST API) — {len(emails)} emails ---")
+    logger.info(f"AI: Batch classification (REST API) — {len(emails)} emails")
 
     # Preprocess all emails
     cleaned = [preprocess_email(e.get("subject", ""), e.get("body", ""), e.get("sender", "")) for e in emails]
@@ -285,7 +288,7 @@ Return a JSON array with exactly {len(emails)} objects. Schema:
   "needs_reply": boolean,
   "urgency": "low" | "medium" | "high",
   "explanation": "Short reason",
-  "tasks": [{ "title": "string", "priority": "medium", "due_date": "YYYY-MM-DD" }]
+  "tasks": [{{ "title": "string", "priority": "medium", "due_date": "YYYY-MM-DD" }}]
 }}
 
 Emails:
@@ -314,6 +317,10 @@ Emails:
 
         # Parse — handle both raw array and wrapped object
         parsed = json.loads(content)
+
+        logger.debug(f"AI: Batch parsed response: {len(parsed) if isinstance(parsed, list) else 'non-list'} items")
+
+
         if isinstance(parsed, dict):
             # Some models wrap in {"classifications": [...]} or {"results": [...]}
             for key in ("classifications", "results", "emails", "data"):
@@ -326,12 +333,12 @@ Emails:
                     parsed = [parsed]
 
         if not isinstance(parsed, list) or len(parsed) != len(emails):
-            print(f"Batch parse mismatch: expected {len(emails)}, got {len(parsed) if isinstance(parsed, list) else 'non-list'}. Falling back.")
+            logger.warning(f"AI: Batch parse mismatch — expected {len(emails)}, got {len(parsed) if isinstance(parsed, list) else 'non-list'}. Falling back.")
             raise ValueError("Batch response count mismatch")
 
-        print(f"Batch AI Response (model={response_data.get('model', model)}, "
-              f"tokens={usage.get('total_tokens', 0)}, "
-              f"latency={latency_ms}ms): {len(parsed)} classifications")
+        logger.info(f"AI: Batch classified (model={response_data.get('model', model)}, "
+                     f"tokens={usage.get('total_tokens', 0)}, "
+                     f"latency={latency_ms}ms): {len(parsed)} classifications")
 
         # Log to database
         if db:
@@ -371,7 +378,7 @@ Emails:
         return sanitized
 
     except Exception as e:
-        print(f"Batch classification failed: {e}. Falling back to individual classification.")
+        logger.error(f"AI: Batch classification failed: {e}. Falling back to individual classification.")
 
         # Log error
         if db:
