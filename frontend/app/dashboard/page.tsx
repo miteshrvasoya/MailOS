@@ -308,26 +308,39 @@ export default function DashboardPage() {
                   ))}
             </div>
           </div>
-          
-          {/* Stats */}
-          <div className="animate-slide-up" style={{ animationDelay: '0.3s' }}>
-            <h2 className="text-2xl font-semibold mb-6 text-foreground">Your Stats</h2>
-            <div className="grid grid-cols-2 gap-4">
-              {stats.map((stat, i) => {
-                const Icon = stat.icon
-                return (
-                  <Card key={i} className="p-4 card-hover border-border/50 hover:border-border group">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="w-10 h-10 rounded-lg bg-secondary/50 group-hover:bg-secondary flex items-center justify-center transition">
-                        <Icon className="w-5 h-5 text-primary" />
+
+          {/* Stats + Digest Perks */}
+          <div className="space-y-6 animate-slide-up" style={{ animationDelay: '0.3s' }}>
+            <div>
+              <h2 className="text-2xl font-semibold mb-6 text-foreground">Your Stats</h2>
+              <div className="grid grid-cols-2 gap-4">
+                {stats.map((stat, i) => {
+                  const Icon = stat.icon
+                  return (
+                    <Card key={i} className="p-4 card-hover border-border/50 hover:border-border group">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="w-10 h-10 rounded-lg bg-secondary/50 group-hover:bg-secondary flex items-center justify-center transition">
+                          <Icon className="w-5 h-5 text-primary" />
+                        </div>
                       </div>
-                    </div>
-                    <p className="text-3xl font-bold text-foreground">{stat.value}</p>
-                    <p className="text-xs text-muted-foreground mt-1.5">{stat.label}</p>
-                  </Card>
-                )
-              })}
+                      <p className="text-3xl font-bold text-foreground">{stat.value}</p>
+                      <p className="text-xs text-muted-foreground mt-1.5">{stat.label}</p>
+                    </Card>
+                  )
+                })}
+              </div>
             </div>
+
+            <Card className="p-5 border-border/50 bg-secondary/30">
+              <h3 className="text-sm font-semibold text-foreground mb-2">
+                Why use digests?
+              </h3>
+              <ul className="text-xs text-muted-foreground space-y-1.5">
+                <li>• Save time by scanning a single summarized email instead of dozens of threads.</li>
+                <li>• Reduce inbox chaos and focus quickly on truly important messages.</li>
+                <li>• Still keep up with valuable newsletters without letting them drown your inbox.</li>
+              </ul>
+            </Card>
           </div>
         </div>
         

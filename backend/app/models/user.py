@@ -41,6 +41,12 @@ class User(SQLModel, table=True):
     last_history_id: Optional[str] = Field(default=None) # Gmail historyId for incremental sync
     last_sync_at: Optional[datetime] = Field(default=None) # Timestamp of last successful sync
 
+    # Digest Settings
+    digest_enabled: bool = Field(default=True)
+    digest_frequency: str = Field(default="daily")  # "daily" or "weekly"
+    # Stored as "HH:MM" (24h) in user's local preference; scheduling can interpret as needed
+    digest_time_local: Optional[str] = Field(default="09:00")
+
     # Relationships
     email_insights: List["EmailInsight"] = Relationship(back_populates="user")
     rules: List["Rule"] = Relationship(back_populates="user")

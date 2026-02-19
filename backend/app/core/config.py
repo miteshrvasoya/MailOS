@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: list[str] = [
         "http://localhost:3000",
         "https://mail-os.vercel.app",
-        "https://mail-os.vercel.app/"
+        "https://www.mailos.in/",
     ]
     
     OPENAI_API_KEY: Optional[str] = None

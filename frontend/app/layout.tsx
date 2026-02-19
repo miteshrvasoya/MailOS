@@ -58,7 +58,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'MailOS - Intelligent Inbox Management',
     description: 'AI that understands your emails, prioritizes what matters, and sends you daily clarity.',
-    url: 'https://mail-os.vercel.app',
+    url: 'https://www.mailos.in/',
     siteName: 'MailOS',
     images: [
       {

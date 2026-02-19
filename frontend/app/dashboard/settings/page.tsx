@@ -12,6 +12,8 @@ import { trackEvent } from '@/lib/analytics'
 export default function SettingsPage() {
   const { user, userId, signOut } = useAuth()
   const [digestTime, setDigestTime] = useState('09:00')
+  const [digestEnabled, setDigestEnabled] = useState(true)
+  const [digestFrequency, setDigestFrequency] = useState<'daily' | 'weekly'>('daily')
   const [aiMode, setAiMode] = useState('cloud')
   const [privacyMode, setPrivacyMode] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -24,6 +26,21 @@ export default function SettingsPage() {
         api.get('/gmail/status', { params: { user_id: userId } })
            .then((res: any) => setGmailStatus(res.data))
            .catch((err: any) => console.error(err))
+
+        // Fetch digest settings
+        api.get('/digests/settings', { params: { user_id: userId } })
+           .then((res: any) => {
+             if (res.data) {
+               setDigestEnabled(res.data.enabled)
+               if (res.data.frequency === 'daily' || res.data.frequency === 'weekly') {
+                 setDigestFrequency(res.data.frequency)
+               }
+               if (res.data.time_local) {
+                 setDigestTime(res.data.time_local)
+               }
+             }
+           })
+           .catch((err: any) => console.error('Failed to load digest settings', err))
     }
   }, [userId])
 
@@ -37,6 +54,23 @@ export default function SettingsPage() {
 
   const handleSignOut = () => {
     signOut()
+  }
+
+  const handleSaveDigestSettings = async () => {
+    if (!userId) return
+    try {
+      await api.put(
+        '/digests/settings',
+        {
+          enabled: digestEnabled,
+          frequency: digestFrequency,
+          time_local: digestTime,
+        },
+        { params: { user_id: userId } },
+      )
+    } catch (err) {
+      console.error('Failed to save digest settings', err)
+    }
   }
 
   const handleDeleteAll = async () => {
@@ -212,16 +246,55 @@ export default function SettingsPage() {
       <Card className="p-6">
         <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
           <Clock className="w-5 h-5" />
-          Digest Delivery Time
+          Digest Emails
         </h3>
-        <div className="flex gap-4">
-          <input
-            type="time"
-            value={digestTime}
-            onChange={(e) => setDigestTime(e.target.value)}
-            className="px-4 py-2 rounded-lg bg-card border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-          <Button>Save</Button>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium mb-1">Receive digest emails</p>
+              <p className="text-sm text-muted-foreground">
+                Get a short summary of your inbox so you can scan what matters.
+              </p>
+            </div>
+            <button
+              onClick={() => setDigestEnabled(!digestEnabled)}
+              className={`w-12 h-6 rounded-full transition-colors ${
+                digestEnabled ? 'bg-primary' : 'bg-secondary'
+              } relative`}
+            >
+              <div
+                className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${
+                  digestEnabled ? 'translate-x-6' : 'translate-x-0.5'
+                }`}
+              ></div>
+            </button>
+          </div>
+
+          <div className="flex flex-wrap gap-4 items-center">
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium">Frequency</label>
+              <select
+                value={digestFrequency}
+                onChange={(e) =>
+                  setDigestFrequency(e.target.value === 'weekly' ? 'weekly' : 'daily')
+                }
+                className="px-3 py-2 rounded-lg bg-card border border-border text-sm"
+              >
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium">Delivery time</label>
+              <input
+                type="time"
+                value={digestTime}
+                onChange={(e) => setDigestTime(e.target.value)}
+                className="px-4 py-2 rounded-lg bg-card border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <Button onClick={handleSaveDigestSettings}>Save</Button>
+          </div>
         </div>
       </Card>
       

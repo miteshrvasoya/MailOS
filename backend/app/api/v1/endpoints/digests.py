@@ -3,7 +3,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session
 from app.api import deps
 from app.models.digest import Digest
-from app.services.digest_service import generate_digest, get_latest_digest, get_digest_history
+from app.models.user import User
+from app.services.digest_service import (
+    generate_digest,
+    get_latest_digest,
+    get_digest_history,
+)
 from pydantic import BaseModel
 from datetime import datetime
 import uuid
@@ -12,6 +17,7 @@ router = APIRouter()
 
 
 # ─── Response Models ──────────────────────────────────────────────
+
 
 class DigestResponse(BaseModel):
     id: uuid.UUID
@@ -29,6 +35,18 @@ class DigestResponse(BaseModel):
 class GenerateRequest(BaseModel):
     user_id: uuid.UUID
     digest_type: str = "daily"  # daily or weekly
+
+
+class DigestSettingsResponse(BaseModel):
+    enabled: bool
+    frequency: str  # daily | weekly
+    time_local: Optional[str] = None
+
+
+class DigestSettingsUpdate(BaseModel):
+    enabled: Optional[bool] = None
+    frequency: Optional[str] = None
+    time_local: Optional[str] = None
 
 
 # ─── Generate ─────────────────────────────────────────────────────
@@ -66,6 +84,54 @@ def get_history(
     """Get digest history for a user."""
     digests = get_digest_history(db, user_id, limit)
     return [_to_response(d) for d in digests]
+
+
+# ─── Settings ─────────────────────────────────────────────────────
+
+
+@router.get("/settings", response_model=DigestSettingsResponse)
+def get_settings(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    """Get current user's digest email settings."""
+    enabled = getattr(current_user, "digest_enabled", True)
+    frequency = getattr(current_user, "digest_frequency", "daily") or "daily"
+    time_local = getattr(current_user, "digest_time_local", None)
+
+    return DigestSettingsResponse(
+        enabled=enabled,
+        frequency=frequency,
+        time_local=time_local,
+    )
+
+
+@router.put("/settings", response_model=DigestSettingsResponse)
+def update_settings(
+    settings_in: DigestSettingsUpdate,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    """Update current user's digest email settings."""
+    if settings_in.frequency and settings_in.frequency not in ("daily", "weekly"):
+        raise HTTPException(status_code=400, detail="Invalid digest frequency")
+
+    if settings_in.enabled is not None:
+        current_user.digest_enabled = settings_in.enabled
+    if settings_in.frequency is not None:
+        current_user.digest_frequency = settings_in.frequency
+    if settings_in.time_local is not None:
+        current_user.digest_time_local = settings_in.time_local
+
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
+
+    return DigestSettingsResponse(
+        enabled=current_user.digest_enabled,
+        frequency=current_user.digest_frequency,
+        time_local=current_user.digest_time_local,
+    )
 
 
 # ─── Helpers ──────────────────────────────────────────────────────

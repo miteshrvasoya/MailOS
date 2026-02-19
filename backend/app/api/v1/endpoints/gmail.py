@@ -11,6 +11,7 @@ from app.api import deps
 from app.models.user import User
 from app.services.gmail_service import GmailService, HistoryExpiredError
 from app.services.email_processor import store_raw_emails, classify_stored_emails
+from app.services.digest_mailer import send_digest_email
 from app.models.google_credential import GoogleCredential
 from app.services.sync_manager import sync_manager
 from app.services.digest_service import generate_digest
@@ -229,20 +230,29 @@ def _run_classification_phase(user_id: uuid.UUID, limit: int):
             return
 
         service = GmailService(user, db)
-        
+
         # Classify
         logger.info(f"[SYNC] Starting classification phase for {user_id}")
         stats = classify_stored_emails(db, user, limit=limit, gmail_service=service)
-        logger.info(f"[SYNC] Classification complete: {stats.classified} classified, {stats.failed} failed")
+        logger.info(
+            f"[SYNC] Classification complete: {stats.classified} classified, {stats.failed} failed"
+        )
 
-        # Generate a fresh daily digest in the background based on newly classified emails
+        # Generate a fresh digest based on user's settings
         try:
-            sync_manager.set_phase(user_id, "digesting", "Generating daily digest...")
-            digest = generate_digest(db, user_id=user.id, digest_type="daily")
-            logger.info(
-                f"[SYNC] Digest generated for user {user_id}: "
-                f"{digest.stats.get('total_emails', 0)} emails, "
-                f"{digest.stats.get('important', 0)} important"
-            )
+            digest_type = getattr(user, "digest_frequency", "daily") or "daily"
+            if getattr(user, "digest_enabled", True):
+                sync_manager.set_phase(
+                    user_id, "digesting", f"Generating {digest_type} digest..."
+                )
+                digest = generate_digest(db, user_id=user.id, digest_type=digest_type)
+                logger.info(
+                    f"[SYNC] Digest generated for user {user_id}: "
+                    f"{digest.stats.get('total_emails', 0)} emails, "
+                    f"{digest.stats.get('important', 0)} important"
+                )
+
+                # Send digest email (non-blocking)
+                send_digest_email(user, digest)
         except Exception as e:
-            logger.error(f"[SYNC] Digest generation failed for {user_id}: {e}")
+            logger.error(f"[SYNC] Digest generation/email failed for {user_id}: {e}")
