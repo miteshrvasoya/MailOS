@@ -67,6 +67,12 @@ app = FastAPI(
     debug=settings.DEBUG
 )
 
+# CORS: with allow_credentials=True, origins cannot be "*" (per spec). Use explicit list.
+_cors_origins = list(settings.BACKEND_CORS_ORIGINS) if settings.BACKEND_CORS_ORIGINS else []
+for origin in ("https://mail-os.vercel.app", "http://localhost:3000", "http://127.0.0.1:3000"):
+    if origin not in _cors_origins:
+        _cors_origins.append(origin)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
