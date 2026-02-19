@@ -62,9 +62,10 @@ class GmailService:
                 self.db.add(cred_model)
                 self.db.commit()
                 logger.info(f"Refreshed Gmail access token for user {self.user.id}")
+                print(f"Refreshed Gmail access token for user {self.user.id}")
             except Exception as e:
                 logger.error(f"Failed to refresh Gmail token for user {self.user.id}: {e}")
-                
+                print(f"Failed to refresh Gmail token for user {self.user.id}: {e}")
         return creds
 
     def _fetch_single_message(self, msg_id: str) -> Optional[Dict[str, Any]]:
@@ -125,9 +126,12 @@ class GmailService:
 
             logger.info(f"GmailService: Found {len(message_ids)} message IDs")
             logger.info(f"Fetching {len(message_ids)} messages concurrently...")
+            print(f"Fetching {len(message_ids)} messages concurrently...")
+            print(f"Message IDs: {message_ids}")
             return self._fetch_messages_concurrent(message_ids)
         except Exception as e:
             logger.error(f"GmailService: Preview sync failed: {e}")
+            print(f"Preview sync failed: {e}")
             raise e
 
     def ensure_label(self, name: str) -> str:
@@ -160,10 +164,12 @@ class GmailService:
             created_label = service.users().labels().create(userId='me', body=label_body).execute()
             self._cache_label_in_db(name, created_label['id'])
             logger.info(f"GmailService: Created label '{name}'")
+            print(f"Created label '{name}'")
             return created_label['id']
             
         except Exception as e:
             logger.error(f"GmailService: Failed to ensure label '{name}': {e}")
+            print(f"Failed to ensure label '{name}': {e}")
             raise e
 
     def _cache_label_in_db(self, name: str, gmail_id: str):
@@ -191,7 +197,9 @@ class GmailService:
             }
             service.users().messages().modify(userId='me', id=gmail_message_id, body=body).execute()
             logger.info(f"GmailService: Applied label {gmail_label_id} to message {gmail_message_id}")
+            print(f"Applied label {gmail_label_id} to message {gmail_message_id}")
         except Exception as e:
+            print(f"Failed to apply label: {e}")
             logger.error(f"GmailService: Failed to apply label {gmail_label_id} to {gmail_message_id}: {e}")
             raise e
 
@@ -207,6 +215,8 @@ class GmailService:
                 sent_at = email.utils.parsedate_to_datetime(date_str)
             except Exception as e:
                 logger.warning(f"Failed to parse date string '{date_str}': {e}")
+
+            print(f"Parsed message: {full_msg}")
 
         snippet = full_msg.get('snippet', '')
 
