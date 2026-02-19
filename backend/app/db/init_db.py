@@ -32,11 +32,42 @@ def init_db():
 
     # 2. Run Alembic Migrations
     try:
-        logger.info("Running Alembic migrations... (SKIPPED for debugging)")
-        # Assume we are in the root 'backend' directory where alembic.ini is
-        # alembic_cfg = config.Config("alembic.ini")
-        # command.upgrade(alembic_cfg, "head")
-        logger.info("Alembic migrations skipped.")
+        logger.info("Running Alembic migrations...")
+        # Get the path to alembic.ini - it should be in the backend directory
+        # We're in app/db/init_db.py, so we need to go up to backend/
+        # __file__ is app/db/init_db.py -> backend/app/db/init_db.py
+        current_file = os.path.abspath(__file__)
+        backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(current_file)))
+        alembic_ini_path = os.path.join(backend_dir, "alembic.ini")
+        
+        # Try multiple paths in case the working directory is different
+        possible_paths = [
+            alembic_ini_path,
+            "alembic.ini",
+            os.path.join(os.getcwd(), "alembic.ini"),
+        ]
+        
+        alembic_ini_path = None
+        for path in possible_paths:
+            if os.path.exists(path):
+                alembic_ini_path = path
+                break
+        
+        if not alembic_ini_path:
+            raise FileNotFoundError(f"Could not find alembic.ini. Tried: {possible_paths}")
+        
+        logger.info(f"Using Alembic config: {alembic_ini_path}")
+        alembic_cfg = config.Config(alembic_ini_path)
+        # The env.py already uses settings.SQLALCHEMY_DATABASE_URI, so we don't need to override
+        # But we can set it here as a fallback
+        alembic_cfg.set_main_option("sqlalchemy.url", settings.SQLALCHEMY_DATABASE_URI)
+        
+        logger.info(f"Running migrations with database: {settings.POSTGRES_DB}")
+        command.upgrade(alembic_cfg, "head")
+        logger.info("Alembic migrations completed successfully.")
     except Exception as e:
-        logger.error(f"Error running migrations: {e}")
-        raise e
+        logger.error(f"Error running migrations: {e}", exc_info=True)
+        # Don't raise - allow app to start even if migrations fail
+        # This prevents the app from crashing on startup if there's a migration issue
+        # The error will be logged and can be fixed manually
+        logger.warning("Continuing startup despite migration error. Please check logs and fix migrations manually.")
