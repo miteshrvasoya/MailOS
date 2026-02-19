@@ -45,7 +45,8 @@ def create_task(
     if not current_user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    task = Task.from_orm(task_in, update={"user_id": current_user.id})
+    data = task_in.model_dump() if hasattr(task_in, "model_dump") else task_in.dict()
+    task = Task(**data, user_id=current_user.id)
     db.add(task)
     db.commit()
     db.refresh(task)
@@ -68,7 +69,7 @@ def update_task(
     if task.user_id != user_id:
         raise HTTPException(status_code=400, detail="Not enough permissions")
     
-    update_data = task_in.dict(exclude_unset=True)
+    update_data = task_in.model_dump(exclude_unset=True) if hasattr(task_in, "model_dump") else task_in.dict(exclude_unset=True)
     for key, value in update_data.items():
         setattr(task, key, value)
     

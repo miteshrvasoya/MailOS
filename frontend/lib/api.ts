@@ -82,7 +82,7 @@ export interface EmailInsight {
 
 export const getTasks = async (userId: string, status?: string) => {
   const params = { user_id: userId, ...(status ? { status } : {}) };
-  const res = await api.get<Task[]>('/tasks', { params });
+  const res = await api.get<Task[]>('/tasks/', { params });
   return res.data;
 };
 

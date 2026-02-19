@@ -1,6 +1,7 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
+from sqlalchemy.orm import selectinload
 from app.api import deps
 from app.models.action import EmailAction
 from app.models.email import EmailInsight
@@ -50,17 +51,16 @@ def get_pending_actions_list(
     
     response = []
     for action in pending_actions:
-        if not action.email:  # Skip if email data is missing (should not happen)
+        if not action.email:  # Skip if email was deleted or not loaded
             continue
-            
         response.append(ActionResponse(
             id=action.id,
             email_id=action.email_id,
-            email_subject=action.email.subject,
-            email_sender=action.email.sender,
+            email_subject=action.email.subject or "",
+            email_sender=action.email.sender or "",
             suggested_label=action.suggested_label,
             confidence=action.confidence,
-            reason=action.reason,
+            reason=action.reason or "",
             created_at=action.created_at,
             status=action.status,
         ))
@@ -68,7 +68,11 @@ def get_pending_actions_list(
 
 
 def _get_pending_list(db: Session, user_id: uuid.UUID = None) -> List[EmailAction]:
-    statement = select(EmailAction).where(EmailAction.status == "pending")
+    statement = (
+        select(EmailAction)
+        .options(selectinload(EmailAction.email))
+        .where(EmailAction.status == "pending")
+    )
     if user_id:
         statement = statement.where(EmailAction.user_id == user_id)
     results = db.exec(statement).all()
