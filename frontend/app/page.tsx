@@ -3,10 +3,12 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Header } from '@/components/header'
+import { Footer } from '@/components/footer'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, Shield, Zap, Lock, Filter, Brain, Settings, LayoutDashboard } from 'lucide-react'
+import { ArrowRight, Check, LayoutDashboard } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { signIn } from 'next-auth/react'
+import { useEffect, useMemo, useState } from 'react'
 
 export default function LandingPage() {
   const { isAuthenticated: isLoggedIn, isLoading: isAuthLoading } = useAuth()
@@ -16,450 +18,454 @@ export default function LandingPage() {
     signIn('google', { callbackUrl: '/dashboard' })
   }
 
+  const primaryCtaLabel = isLoggedIn ? 'Go to Dashboard' : 'Get Inbox Clarity'
+
+  useEffect(() => {
+    // Smooth scroll for anchor links
+    const handleAnchorClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      const anchor = target.closest('a[href^="#"]')
+      if (anchor) {
+        const href = anchor.getAttribute('href')
+        if (href && href.startsWith('#')) {
+          e.preventDefault()
+          const id = href.slice(1)
+          const element = document.getElementById(id)
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          }
+        }
+      }
+    }
+    document.addEventListener('click', handleAnchorClick)
+    return () => document.removeEventListener('click', handleAnchorClick)
+  }, [])
+
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background scroll-smooth">
       <Header />
       
       {/* Hero Section */}
-      <section className="px-6 py-20 md:py-32 max-w-7xl mx-auto">
-        <div className="text-center space-y-8">
-          <h1 className="text-5xl md:text-7xl font-bold text-balance leading-tight">
-            Your inbox, finally intelligent.
-          </h1>
-          <p className="text-xl text-muted-foreground text-balance max-w-2xl mx-auto">
-            AI that understands your emails, prioritizes what matters, and sends you daily clarity.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            {isLoggedIn ? (
-              <Button size="lg" variant="glow" onClick={() => router.push('/dashboard')} className="group">
-                  <LayoutDashboard className="w-5 h-5 mr-2" />
-                  Go to Dashboard
-                  <ArrowRight className="w-4 h-4 ml-1 transition-transform duration-200 group-hover:translate-x-1" />
-              </Button>
-            ) : (
+      <section className="px-6 py-20 md:py-28 max-w-7xl mx-auto scroll-mt-20">
+        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-balance leading-[1.05] tracking-tight">
+              Drowning in 200 emails a day?
+            </h1>
+            <p className="text-lg md:text-xl text-muted-foreground text-balance max-w-xl leading-relaxed">
+              MailOS <span className="text-foreground font-medium">detects</span> what matters,
+              <span className="text-foreground font-medium"> groups</span> similar emails,
+              <span className="text-foreground font-medium"> filters</span> low-priority noise,
+              and <span className="text-foreground font-medium">summarizes</span> everything into one clean daily digest.
+            </p>
 
-              <Button size="lg" variant="glow" onClick={handleGoogleSignIn} className="group">
-                <svg className="w-5 h-5 mr-2 transition-transform duration-200 group-hover:scale-110" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34a853"/>
-                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#fbbc05"/>
-                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#ea4335"/>
-                </svg>
-                Login / Sign Up with Google
-                <ArrowRight className="w-4 h-4 ml-1 transition-transform duration-200 group-hover:translate-x-1" />
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              {isLoggedIn ? (
+                <Button size="lg" variant="glow" onClick={() => router.push('/dashboard')} className="group shadow-lg hover:shadow-xl transition-all">
+                  <LayoutDashboard className="w-5 h-5 mr-2" />
+                  {primaryCtaLabel}
+                  <ArrowRight className="w-4 h-4 ml-1 transition-transform duration-200 group-hover:translate-x-1" />
+                </Button>
+              ) : (
+                <Button size="lg" variant="glow" onClick={handleGoogleSignIn} className="group shadow-lg hover:shadow-xl transition-all">
+                  Get Inbox Clarity
+                  <ArrowRight className="w-4 h-4 ml-1 transition-transform duration-200 group-hover:translate-x-1" />
+                </Button>
+              )}
+
+              <Button size="lg" variant="outline" asChild className="hover:bg-secondary transition-colors">
+                <a href="#how-it-works" className="smooth-scroll">See how it works</a>
               </Button>
-            )}
+            </div>
+
+            <p className="text-sm text-muted-foreground flex items-center gap-2">
+              <Check className="w-4 h-4 text-primary" />
+              Read-only by default. We never send or delete emails.
+            </p>
+          </div>
+
+          <div className="animate-in fade-in slide-in-from-right-4 duration-700 delay-150">
+            <HeroDashboardPreview />
+          </div>
+        </div>
+      </section>
+
+      {/* Trust (moved higher) */}
+      <section className="px-6 py-16 md:py-20 bg-card border-y border-border scroll-mt-20">
+        <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-start">
+          <div className="space-y-4">
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Built for trust. Read-only by default.</h2>
+            <p className="text-muted-foreground max-w-xl text-lg leading-relaxed">
+              MailOS works on top of Gmail. You stay in Gmail — we add clarity.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            {[
+              'Read-only by default',
+              'Cannot send emails',
+              'Cannot delete emails',
+              'Data encrypted',
+              'Revoke access anytime',
+            ].map((t) => (
+              <div key={t} className="flex items-start gap-3 rounded-xl border border-border bg-background px-5 py-4 hover:shadow-md transition-all group">
+                <span className="mt-0.5 text-primary flex-shrink-0">
+                  <Check className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                </span>
+                <span className="text-sm text-foreground/90 font-medium">{t}</span>
+              </div>
+            ))}
           </div>
         </div>
       </section>
       
-      {/* Problem Section */}
-      <section id="features" className="px-6 py-20 bg-card border-y border-border">
+      {/* Before / After */}
+      <section id="before-after" className="px-6 py-20 md:py-24 max-w-7xl mx-auto scroll-mt-20">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-4xl font-bold text-center mb-16">Stop drowning in email.</h2>
-          
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div className="space-y-6">
-              <div className="space-y-3">
-                <h3 className="text-lg font-semibold">Before MailOS</h3>
-                <div className="bg-background rounded-lg p-6 space-y-2 text-sm text-muted-foreground">
-                  <p>📧 873 unread emails</p>
-                  <p>⚠️ Mixed newsletters & important mail</p>
-                  <p>⏰ Hours spent sorting & filtering</p>
-                  <p>❌ Missing critical messages</p>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <h3 className="text-lg font-semibold">After MailOS</h3>
-                <div className="bg-secondary rounded-lg p-6 space-y-2 text-sm">
-                  <p>✅ 47 important emails highlighted</p>
-                  <p>📂 5 smart groups created automatically</p>
-                  <p>⚡ 15 minutes to inbox clarity</p>
-                  <p>🎯 Never miss a critical message</p>
-                </div>
-              </div>
+          <div className="text-center space-y-4 mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight">Stop missing important emails in the noise.</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+              The workflow is simple: detect what matters, group the rest, and scan one summary.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8">
+            <div className="rounded-xl border border-border bg-card p-8 space-y-5 shadow-sm hover:shadow-lg transition-all">
+              <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Before MailOS</p>
+              <ul className="space-y-4 text-base">
+                <li className="flex items-center gap-3">
+                  <span className="text-3xl font-bold text-foreground">187</span>
+                  <span className="text-muted-foreground">unread emails</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <span className="text-muted-foreground">Missed</span>
+                  <span className="text-3xl font-bold text-foreground">3</span>
+                  <span className="text-muted-foreground">important messages</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <span className="text-3xl font-bold text-foreground">45 min</span>
+                  <span className="text-muted-foreground">scrolling</span>
+                </li>
+                <li className="text-muted-foreground">Manual filters</li>
+              </ul>
             </div>
-            
-            <div className="bg-background rounded-xl p-8 border border-border">
-              <div className="space-y-2 text-sm text-muted-foreground">
-                <div className="flex items-center justify-between p-3 hover:bg-secondary rounded transition">
-                  <span>Welcome to MailOS!</span>
-                  <span>Now</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-secondary rounded">
-                  <span className="font-medium">Your flight is confirmed - TK487</span>
-                  <span className="text-xs">2h</span>
-                </div>
-                <div className="flex items-center justify-between p-3 hover:bg-secondary rounded transition">
-                  <span>Weekly newsletter #42</span>
-                  <span>4h</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-secondary rounded">
-                  <span className="font-medium">Quarterly review meeting tomorrow</span>
-                  <span className="text-xs">5h</span>
-                </div>
-              </div>
+
+            <div className="rounded-xl border-2 border-primary/20 bg-background p-8 space-y-5 shadow-lg hover:shadow-xl transition-all">
+              <p className="text-sm font-semibold text-primary uppercase tracking-wide">After MailOS</p>
+              <ul className="space-y-4 text-base">
+                <li className="flex items-center gap-3">
+                  <span className="text-3xl font-bold text-primary">6</span>
+                  <span className="text-muted-foreground">important surfaced</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <span className="text-3xl font-bold text-primary">42</span>
+                  <span className="text-muted-foreground">grouped automatically</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <span className="text-3xl font-bold text-primary">139</span>
+                  <span className="text-muted-foreground">filtered as low priority</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <span className="text-3xl font-bold text-primary">3 min</span>
+                  <span className="text-muted-foreground">daily summary</span>
+                </li>
+              </ul>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* What it actually does */}
+      <section id="features" className="px-6 py-20 md:py-24 bg-card border-y border-border scroll-mt-20">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center space-y-4 mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight">What it actually does</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+              No new inbox. No new workflow. Just clarity on top of Gmail.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              {
+                title: 'Detects important emails automatically',
+                desc: 'Surfaces time-sensitive messages so they don’t get buried.',
+              },
+              {
+                title: 'Groups similar emails together',
+                desc: 'Clusters newsletters, promotions, alerts, and updates into bundles.',
+              },
+              {
+                title: 'Shows one structured daily summary',
+                desc: 'A scannable digest with sections, counts, and top highlights.',
+              },
+              {
+                title: 'Optional auto-labeling in Gmail',
+                desc: 'If you enable it, MailOS applies labels for approved categories.',
+              },
+            ].map((f, i) => (
+              <div key={f.title} className="rounded-xl border border-border bg-background p-6 shadow-sm hover:shadow-lg transition-all group space-y-3">
+                <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">{f.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
       
       {/* How It Works */}
-      <section id="how-it-works" className="px-6 py-20 max-w-7xl mx-auto">
-        <h2 className="text-4xl font-bold text-center mb-16">How it works</h2>
-        
-        <div className="grid md:grid-cols-3 gap-8">
-          <div className="space-y-4">
-            <div className="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center font-bold text-lg">
-              1
-            </div>
-            <h3 className="text-xl font-semibold">Connect Gmail</h3>
-            <p className="text-muted-foreground">
-              Give MailOS read-only access to your inbox. We never send emails or modify your messages.
-            </p>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center font-bold text-lg">
-              2
-            </div>
-            <h3 className="text-xl font-semibold">AI understands your mail</h3>
-            <p className="text-muted-foreground">
-              Our AI learns what matters to you, grouping emails intelligently and ranking by importance.
-            </p>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center font-bold text-lg">
-              3
-            </div>
-            <h3 className="text-xl font-semibold">Receive daily digest</h3>
-            <p className="text-muted-foreground">
-              Get one clear, concise email each morning summarizing what needs your attention.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works in Gmail */}
-      <section className="px-6 py-20 bg-card border-y border-border">
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-4xl font-bold text-center mb-4">How MailOS works in Gmail</h2>
-          <p className="text-center text-muted-foreground mb-16 max-w-2xl mx-auto">
-            We analyze your emails to provide insights and organization, but your emails stay in Gmail. We only store statistics and insights.
+      <section id="how-it-works" className="px-6 py-20 md:py-24 max-w-7xl mx-auto scroll-mt-20">
+        <div className="text-center space-y-4 mb-16">
+          <h2 className="text-4xl md:text-5xl font-bold tracking-tight">Four steps to inbox clarity.</h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+            Short, simple, and designed for high-volume inboxes.
           </p>
+        </div>
 
-          <div className="space-y-12">
-            {/* Data Flow */}
-            <div>
-              <h3 className="text-2xl font-semibold mb-8">Data Flow</h3>
-              <div className="grid md:grid-cols-2 gap-8">
-                <div className="space-y-6">
-                  <div className="bg-background rounded-lg p-6 border border-border">
-                    <h4 className="font-semibold mb-3 text-primary">What we receive from Gmail</h4>
-                    <ul className="space-y-2 text-sm text-muted-foreground">
-                      <li className="flex gap-2">
-                        <span>•</span>
-                        <span>Email metadata (sender, subject, timestamp)</span>
-                      </li>
-                      <li className="flex gap-2">
-                        <span>•</span>
-                        <span>Email content for analysis only</span>
-                      </li>
-                      <li className="flex gap-2">
-                        <span>•</span>
-                        <span>Labels and categories you've created</span>
-                      </li>
-                      <li className="flex gap-2">
-                        <span>•</span>
-                        <span>Read/unread status</span>
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-
-                <div className="space-y-6">
-                  <div className="bg-background rounded-lg p-6 border border-border">
-                    <h4 className="font-semibold mb-3 text-primary">What we store in our database</h4>
-                    <ul className="space-y-2 text-sm text-muted-foreground">
-                      <li className="flex gap-2">
-                        <span>•</span>
-                        <span>Email statistics (count, sender patterns)</span>
-                      </li>
-                      <li className="flex gap-2">
-                        <span>•</span>
-                        <span>AI classification tags and insights</span>
-                      </li>
-                      <li className="flex gap-2">
-                        <span>•</span>
-                        <span>Your custom groups and rules</span>
-                      </li>
-                      <li className="flex gap-2">
-                        <span>•</span>
-                        <span>Digest preferences and settings</span>
-                      </li>
-                    </ul>
-                  </div>
-                </div>
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            { n: 1, title: 'Connect Gmail (read-only access)' },
+            { n: 2, title: 'MailOS analyzes emails' },
+            { n: 3, title: 'Important emails are surfaced' },
+            { n: 4, title: 'You receive a clean daily summary' },
+          ].map((s) => (
+            <div key={s.n} className="rounded-xl border border-border bg-card p-7 shadow-sm hover:shadow-lg transition-all group">
+              <div className="w-12 h-12 rounded-lg bg-secondary group-hover:bg-primary group-hover:text-primary-foreground flex items-center justify-center font-bold text-lg mb-4 transition-colors">
+                {s.n}
               </div>
-
-              <div className="mt-6 bg-background rounded-lg p-6 border border-destructive/20">
-                <h4 className="font-semibold mb-3 text-destructive">What we NEVER store</h4>
-                <div className="grid md:grid-cols-2 gap-4 text-sm text-muted-foreground">
-                  <p>✗ Your actual emails or full content</p>
-                  <p>✗ Email attachments</p>
-                  <p>✗ Passwords or credentials</p>
-                  <p>✗ Any personally identifiable information</p>
-                </div>
-              </div>
+              <p className="font-semibold text-foreground group-hover:text-primary transition-colors">{s.title}</p>
             </div>
-
-            {/* Architecture */}
-            <div>
-              <h3 className="text-2xl font-semibold mb-8">How the Integration Works</h3>
-              <div className="space-y-4">
-                <div className="bg-background rounded-lg p-6 border border-border">
-                  <div className="flex gap-4 items-start">
-                    <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center font-bold flex-shrink-0">
-                      1
-                    </div>
-                    <div>
-                      <h4 className="font-semibold mb-2">Read-Only Gmail Access</h4>
-                      <p className="text-sm text-muted-foreground">
-                        You authorize MailOS with read-only access to Gmail via OAuth. We can only read your emails, never modify, delete, or send them.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-background rounded-lg p-6 border border-border">
-                  <div className="flex gap-4 items-start">
-                    <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center font-bold flex-shrink-0">
-                      2
-                    </div>
-                    <div>
-                      <h4 className="font-semibold mb-2">Real-Time Analysis</h4>
-                      <p className="text-sm text-muted-foreground">
-                        When you sync, we analyze your emails using AI to classify them by category, importance, and relevance. The analysis happens securely in our servers.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-background rounded-lg p-6 border border-border">
-                  <div className="flex gap-4 items-start">
-                    <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center font-bold flex-shrink-0">
-                      3
-                    </div>
-                    <div>
-                      <h4 className="font-semibold mb-2">Dashboard Insights</h4>
-                      <p className="text-sm text-muted-foreground">
-                        The MailOS dashboard displays statistics, insights, and automated categories based on the analysis. The actual emails remain in Gmail.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-background rounded-lg p-6 border border-border">
-                  <div className="flex gap-4 items-start">
-                    <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center font-bold flex-shrink-0">
-                      4
-                    </div>
-                    <div>
-                      <h4 className="font-semibold mb-2">Daily Digest Emails</h4>
-                      <p className="text-sm text-muted-foreground">
-                        We send you one daily email summarizing the insights and important messages. You can act on them directly in Gmail.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Why This Matters */}
-            <div>
-              <h3 className="text-2xl font-semibold mb-8">Why This Approach</h3>
-              <div className="grid md:grid-cols-3 gap-6">
-                <div className="space-y-3">
-                  <div className="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center">
-                    <Shield className="w-6 h-6" />
-                  </div>
-                  <h4 className="font-semibold">Maximum Privacy</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Your emails stay in Gmail where you expect them. We only process and store insights, not the actual content.
-                  </p>
-                </div>
-                <div className="space-y-3">
-                  <div className="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center">
-                    <Zap className="w-6 h-6" />
-                  </div>
-                  <h4 className="font-semibold">Zero Data Silos</h4>
-                  <p className="text-sm text-muted-foreground">
-                    All your emails remain in Gmail with full search and access. MailOS enhances it without storing your mail.
-                  </p>
-                </div>
-                <div className="space-y-3">
-                  <div className="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center">
-                    <Lock className="w-6 h-6" />
-                  </div>
-                  <h4 className="font-semibold">Always in Control</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Revoke access anytime. All insights and preferences are stored separately and can be deleted.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
       </section>
-      
-      {/* Features */}
-      <section className="px-6 py-20 bg-card border-y border-border">
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-4xl font-bold text-center mb-16">Powerful features</h2>
-          
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[
-              {
-                icon: Brain,
-                title: 'AI Classification',
-                description: 'Automatically categorizes emails by type and importance.'
-              },
-              {
-                icon: Filter,
-                title: 'Smart Grouping',
-                description: 'Groups related emails together for easy browsing.'
-              },
-              {
-                icon: Zap,
-                title: 'Digest Engine',
-                description: 'Create personalized daily digests with your rules.'
-              },
-              {
-                icon: Settings,
-                title: 'Custom Rules',
-                description: 'Set up filters and routing rules without code.'
-              },
-              {
-                icon: Shield,
-                title: 'Privacy First',
-                description: 'Read-only access, encrypted, and no data sharing.'
-              },
-              {
-                icon: Lock,
-                title: 'Self-Hosted',
-                description: 'Run MailOS on your own infrastructure if you prefer.'
-              }
-            ].map((feature, i) => {
-              const Icon = feature.icon
-              return (
-                <div key={i} className="space-y-4">
-                  <div className="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center">
-                    <Icon className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-lg font-semibold">{feature.title}</h3>
-                  <p className="text-muted-foreground">{feature.description}</p>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      </section>
-      
-      {/* Trust Section */}
-      <section className="px-6 py-20 max-w-7xl mx-auto">
-        <div className="space-y-8">
-          <div className="text-center space-y-4">
-            <h2 className="text-4xl font-bold">Built with trust</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              We take your privacy seriously. Here's what we do and don't do.
+
+      {/* Differentiation */}
+      <section className="px-6 py-20 md:py-24 bg-card border-y border-border">
+        <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
+          <div className="space-y-5">
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight">MailOS is not another email client.</h2>
+            <p className="text-muted-foreground max-w-xl text-lg leading-relaxed">
+              It works <span className="text-foreground font-medium">on top of Gmail</span>. You keep using Gmail —
+              MailOS adds clarity so you stop missing what matters.
             </p>
           </div>
-          
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-green-500">What we do</h3>
-              <ul className="space-y-3 text-sm text-muted-foreground">
-                <li className="flex gap-3">
-                  <span className="text-primary mt-1">✓</span>
-                  <span>Read your emails to understand and classify them</span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="text-primary mt-1">✓</span>
-                  <span>Encrypt data in transit and at rest</span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="text-primary mt-1">✓</span>
-                  <span>Keep all data within your account</span>
-                </li>
-              </ul>
-            </div>
-            
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-destructive">What we don't do</h3>
-              <ul className="space-y-3 text-sm text-muted-foreground">
-                <li className="flex gap-3">
-                  <span>✗</span>
-                  <span>Send emails on your behalf</span>
-                </li>
-                <li className="flex gap-3">
-                  <span>✗</span>
-                  <span>Share your data with third parties</span>
-                </li>
-                <li className="flex gap-3">
-                  <span>✗</span>
-                  <span>Train models on your personal emails</span>
-                </li>
-              </ul>
+          <div className="rounded-xl border border-border bg-background p-8 shadow-lg space-y-4">
+            <p className="text-sm text-muted-foreground font-medium">
+              No migration. No new inbox to learn.
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                { verb: 'Detect', desc: 'Important emails' },
+                { verb: 'Group', desc: 'Newsletters & promos' },
+                { verb: 'Filter', desc: 'Low priority noise' },
+                { verb: 'Summarize', desc: 'One daily digest' },
+              ].map((item) => (
+                <div key={item.verb} className="rounded-lg border border-border bg-card px-5 py-4 hover:shadow-md transition-all group">
+                  <p className="font-semibold text-foreground group-hover:text-primary transition-colors">{item.verb}</p>
+                  <p className="text-muted-foreground text-xs mt-1.5">{item.desc}</p>
+                </div>
+              ))}
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Social proof */}
+      <section className="px-6 py-20 md:py-24 max-w-7xl mx-auto">
+        <div className="text-center space-y-4 mb-16">
+          <h2 className="text-4xl md:text-5xl font-bold tracking-tight">Built in public.</h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+            Early beta users are already using MailOS to stay on top of high-volume inboxes.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-6">
+          {[
+            {
+              title: 'Founder inbox → one daily scan.',
+              body: 'See what matters without scrolling threads all morning.',
+            },
+            {
+              title: 'Newsletter-heavy → grouped, not overwhelming.',
+              body: 'Keep the value, lose the noise.',
+            },
+            {
+              title: 'Job search → important replies surfaced.',
+              body: 'Don’t miss recruiters, interviews, or time-sensitive steps.',
+            },
+          ].map((q) => (
+            <div key={q.title} className="rounded-xl border border-border bg-card p-7 shadow-sm hover:shadow-lg transition-all space-y-3">
+              <p className="font-semibold text-foreground">{q.title}</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">{q.body}</p>
+            </div>
+          ))}
         </div>
       </section>
       
       {/* Chrome Extension Section - Hidden for now */}
 
       {/* CTA */}
-      <section id="waitlist" className="px-6 py-24 bg-card border-t border-border">
+      <section id="waitlist" className="px-6 py-24 md:py-28 bg-card border-t border-border">
         <div className="max-w-3xl mx-auto text-center space-y-8">
-          <div className="space-y-4">
-            <h2 className="text-4xl font-bold">{isLoggedIn ? 'Welcome back!' : 'Ready for inbox clarity?'}</h2>
-            <p className="text-muted-foreground text-lg">
-              {isLoggedIn 
-                ? 'Your intelligent inbox is waiting for you.' 
-                : 'Join hundreds of productivity-focused professionals already using MailOS.'}
+          <div className="space-y-5">
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight">{isLoggedIn ? 'Welcome back!' : 'Ready for inbox clarity?'}</h2>
+            <p className="text-muted-foreground text-lg md:text-xl max-w-2xl mx-auto">
+              {isLoggedIn
+                ? 'Your dashboard is ready.'
+                : 'Stop missing important emails. Get one clean daily summary.'}
             </p>
           </div>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             {isLoggedIn ? (
-              <Button size="lg" variant="glow" asChild className="group">
+              <Button size="lg" variant="glow" asChild className="group shadow-lg hover:shadow-xl transition-all">
                 <Link href="/dashboard">
                   <LayoutDashboard className="w-5 h-5 mr-2" />
-                  Go to Dashboard
+                  {primaryCtaLabel}
                   <ArrowRight className="w-4 h-4 ml-1 transition-transform duration-200 group-hover:translate-x-1" />
                 </Link>
               </Button>
             ) : (
-              <Button size="lg" variant="glow" onClick={handleGoogleSignIn} className="group">
-                <svg className="w-5 h-5 mr-2 transition-transform duration-200 group-hover:scale-110" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34a853"/>
-                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#fbbc05"/>
-                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#ea4335"/>
-                </svg>
-                Login / Sign Up with Google
+              <Button size="lg" variant="glow" onClick={handleGoogleSignIn} className="group shadow-lg hover:shadow-xl transition-all">
+                Get Inbox Clarity
                 <ArrowRight className="w-4 h-4 ml-1 transition-transform duration-200 group-hover:translate-x-1" />
               </Button>
             )}
           </div>
+          <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">
+            <Check className="w-4 h-4 text-primary" />
+            Read-only by default. We never send or delete emails.
+          </p>
         </div>
       </section>
       
-      {/* Footer */}
-      <footer className="border-t border-border bg-card py-12">
-        <div className="max-w-7xl mx-auto px-6 text-center text-sm text-muted-foreground">
-          <p>&copy; 2026 MailOS. All rights reserved.</p>
-        </div>
-      </footer>
+      <Footer />
     </main>
+  )
+}
+
+function useCountUp(target: number, durationMs = 700) {
+  const [value, setValue] = useState(0)
+
+  useEffect(() => {
+    let raf = 0
+    const start = performance.now()
+    const from = 0
+
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / durationMs)
+      // Ease-out cubic
+      const eased = 1 - Math.pow(1 - t, 3)
+      const next = Math.round(from + (target - from) * eased)
+      setValue(next)
+      if (t < 1) raf = requestAnimationFrame(tick)
+    }
+
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [target, durationMs])
+
+  return value
+}
+
+function HeroDashboardPreview() {
+  const stats = useMemo(
+    () => [
+      { label: 'emails received', value: 187 },
+      { label: 'important', value: 6 },
+      { label: 'grouped', value: 42 },
+      { label: 'filtered', value: 139 },
+    ],
+    [],
+  )
+
+  const v0 = useCountUp(stats[0].value)
+  const v1 = useCountUp(stats[1].value)
+  const v2 = useCountUp(stats[2].value)
+  const v3 = useCountUp(stats[3].value)
+  const values = [v0, v1, v2, v3]
+
+  return (
+    <div className="relative">
+      <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-background">
+          <div className="space-y-0.5">
+            <p className="text-sm font-semibold">Dashboard</p>
+            <p className="text-xs text-muted-foreground">Today</p>
+          </div>
+          <div className="text-xs text-muted-foreground">MailOS</div>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { k: 'Important', v: '6' },
+              { k: 'Needs reply', v: '3' },
+              { k: 'High urgency', v: '2' },
+              { k: 'Grouped', v: '42' },
+            ].map((c) => (
+              <div key={c.k} className="rounded-lg border border-border bg-background px-4 py-3">
+                <p className="text-xs text-muted-foreground">{c.k}</p>
+                <p className="text-2xl font-bold leading-tight">{c.v}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-xl border border-border bg-background p-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-semibold">Important emails</p>
+              <p className="text-xs text-muted-foreground">Top</p>
+            </div>
+            <div className="space-y-2 text-sm">
+              <RowStrong title="Interview schedule confirmed" meta="2h" />
+              <Row title="Weekly newsletter" meta="4h" />
+              <RowStrong title="Invoice due tomorrow" meta="6h" />
+              <Row title="Product update" meta="8h" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Overlay stats */}
+      <div className="absolute -top-5 -left-4 sm:-left-6 rounded-xl border border-border bg-background shadow-lg px-5 py-4 w-[260px] backdrop-blur-sm">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+          Inbox Today
+        </p>
+        <div className="space-y-2 text-sm">
+          <p className="flex items-center justify-between">
+            <span className="text-muted-foreground">Received</span>
+            <span className="font-bold text-foreground text-lg">{values[0]}</span>
+          </p>
+          <p className="flex items-center justify-between">
+            <span className="text-muted-foreground">Important</span>
+            <span className="font-bold text-primary text-lg">{values[1]}</span>
+          </p>
+          <p className="flex items-center justify-between">
+            <span className="text-muted-foreground">Grouped</span>
+            <span className="font-bold text-foreground text-lg">{values[2]}</span>
+          </p>
+          <p className="flex items-center justify-between">
+            <span className="text-muted-foreground">Filtered</span>
+            <span className="font-bold text-foreground text-lg">{values[3]}</span>
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Row({ title, meta }: { title: string; meta: string }) {
+  return (
+    <div className="flex items-center justify-between rounded-lg px-3 py-2 hover:bg-secondary transition">
+      <span className="text-muted-foreground">{title}</span>
+      <span className="text-xs text-muted-foreground">{meta}</span>
+    </div>
+  )
+}
+
+function RowStrong({ title, meta }: { title: string; meta: string }) {
+  return (
+    <div className="flex items-center justify-between rounded-lg px-3 py-2 bg-secondary">
+      <span className="font-medium">{title}</span>
+      <span className="text-xs text-muted-foreground">{meta}</span>
+    </div>
   )
 }

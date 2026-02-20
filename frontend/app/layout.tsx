@@ -62,7 +62,7 @@ export const metadata: Metadata = {
     siteName: 'MailOS',
     images: [
       {
-        url: 'https://pub-2a4eb4e23d7d4d18bc7ca5d587d38902.r2.dev/landing-page.png',
+        url: 'https://pub-2a4eb4e23d7d4d18bc7ca5d587d38902.r2.dev/landing-page-2.png',
         width: 1200,
         height: 630,
         alt: 'MailOS Preview',
@@ -76,7 +76,7 @@ export const metadata: Metadata = {
     title: 'MailOS - Intelligent Inbox Management',
     description: 'AI that understands your emails, prioritizes what matters, and sends you daily clarity.',
     creator: '@mailos_precizn',
-    images: ['https://pub-2a4eb4e23d7d4d18bc7ca5d587d38902.r2.dev/landing-page.png'],
+    images: ['https://pub-2a4eb4e23d7d4d18bc7ca5d587d38902.r2.dev/landing-page-2.png'],
   },
 }
 
