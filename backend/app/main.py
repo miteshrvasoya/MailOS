@@ -41,13 +41,13 @@ async def lifespan(app: FastAPI):
         scheduler.add_job(
             run_background_sync,
             'interval',
-            minutes=5,
+            hours=1,
             id='gmail_background_sync',
             name='Gmail Background Sync',
             replace_existing=True,
         )
         scheduler.start()
-        logger.info("Background sync scheduler started (every 5 minutes)")
+        logger.info("Background sync scheduler started (every 1 hour)")
     except ImportError:
         logger.warning("APScheduler not installed. Background sync disabled. Install with: pip install apscheduler")
     except Exception as e:

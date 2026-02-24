@@ -9,7 +9,8 @@ from app.db.session import engine
 from app.models.user import User
 from app.models.google_credential import GoogleCredential
 from app.services.gmail_service import GmailService, HistoryExpiredError
-from app.services.email_processor import process_emails_batch
+from app.services.email_processor import store_raw_emails, classify_stored_emails
+from app.services.digest_service import generate_digest
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +44,7 @@ def sync_user_emails(user: User, db: Session) -> dict:
 
         # Full sync fallback
         if sync_type == "full" or (not raw_emails and not new_history_id):
-            raw_emails = service.fetch_preview_emails(limit=50)
+            raw_emails = service.fetch_all_missing_emails()
             sync_type = "full"
 
         # Get latest historyId  
@@ -57,11 +58,26 @@ def sync_user_emails(user: User, db: Session) -> dict:
         # Update total
         sync_manager.set_total(user.id, len(raw_emails))
 
-        # Process through batch pipeline
-        batch_results = process_emails_batch(
-            db, user, raw_emails, is_preview=False, gmail_service=service
+        # --- Phase 1: Store Raw Emails ---
+        storage_stats = store_raw_emails(db, user, raw_emails, is_preview=False)
+        
+        # --- Phase 2: Classify Emails & Extract Tasks ---
+        # Classify all new emails (plus any stale pending) in batches automatically
+        classify_stats = classify_stored_emails(
+            db, 
+            user, 
+            limit=max(50, len(raw_emails)), 
+            gmail_service=service
         )
-        processed = len(batch_results)
+
+        processed = storage_stats.stored + classify_stats.classified
+
+        # --- Phase 3: Generate Insights & Digest ---
+        try:
+            generate_digest(db, user.id, "daily")
+            logger.info(f"Background sync: Digest generated for user {user.id}")
+        except Exception as digest_err:
+            logger.error(f"Background sync: Failed to generate digest for user {user.id}: {digest_err}")
 
         # Update sync state
         if new_history_id:
@@ -96,8 +112,11 @@ def run_background_sync():
     logger.info("Background sync starting...")
     
     with Session(engine) as db:
-        # Find all users with Gmail credentials
-        stmt = select(User).join(GoogleCredential).where(User.is_active == True)
+        # Find all users with Gmail credentials who have auto-fetch enabled
+        stmt = select(User).join(GoogleCredential).where(
+            User.is_active == True,
+            User.auto_fetch_enabled == True
+        )
         users = db.exec(stmt).all()
         
         now = datetime.now(timezone.utc)

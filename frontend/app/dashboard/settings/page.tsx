@@ -18,37 +18,42 @@ export default function SettingsPage() {
   const [privacyMode, setPrivacyMode] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
-  const [gmailStatus, setGmailStatus] = useState<{connected: boolean, write_access: boolean} | null>(null)
+  const [gmailStatus, setGmailStatus] = useState<{ connected: boolean, write_access: boolean } | null>(null)
+
+  // Added state for new settings API
+  const [autoFetchEnabled, setAutoFetchEnabled] = useState(true)
+  const [actionMode, setActionMode] = useState<'review_first' | 'auto_apply'>('review_first')
+  const [confidenceThreshold, setConfidenceThreshold] = useState(85)
 
   // Fetch Gmail Status
   useEffect(() => {
     if (userId) {
-        api.get('/gmail/status', { params: { user_id: userId } })
-           .then((res: any) => setGmailStatus(res.data))
-           .catch((err: any) => console.error(err))
+      api.get('/gmail/status', { params: { user_id: userId } })
+        .then((res: any) => setGmailStatus(res.data))
+        .catch((err: any) => console.error(err))
 
-        // Fetch digest settings
-        api.get('/digests/settings', { params: { user_id: userId } })
-           .then((res: any) => {
-             if (res.data) {
-               setDigestEnabled(res.data.enabled)
-               if (res.data.frequency === 'daily' || res.data.frequency === 'weekly') {
-                 setDigestFrequency(res.data.frequency)
-               }
-               if (res.data.time_local) {
-                 setDigestTime(res.data.time_local)
-               }
-             }
-           })
-           .catch((err: any) => console.error('Failed to load digest settings', err))
+      // Fetch digest settings
+      api.get('/digests/settings', { params: { user_id: userId } })
+        .then((res: any) => {
+          if (res.data) {
+            setDigestEnabled(res.data.enabled)
+            if (res.data.frequency === 'daily' || res.data.frequency === 'weekly') {
+              setDigestFrequency(res.data.frequency)
+            }
+            if (res.data.time_local) {
+              setDigestTime(res.data.time_local)
+            }
+          }
+        })
+        .catch((err: any) => console.error('Failed to load digest settings', err))
     }
   }, [userId])
 
   const handleUpgrade = () => {
     trackEvent({ action: 'enable_auto_labeling', category: 'Settings', label: 'User clicked upgrade' })
-    signIn('google', { 
-        callbackUrl: '/dashboard/settings',
-        scope: "openid profile email https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.modify" 
+    signIn('google', {
+      callbackUrl: '/dashboard/settings',
+      scope: "openid profile email https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.modify"
     })
   }
 
@@ -73,12 +78,27 @@ export default function SettingsPage() {
     }
   }
 
+  const handleSaveUserSettings = async (updates: { auto_fetch_enabled?: boolean; action_mode?: string; confidence_threshold?: number }) => {
+    if (!userId) return
+    try {
+      // If we are updating threshold, convert it back from 85 -> 0.85
+      const payload = { ...updates }
+      if (payload.confidence_threshold !== undefined) {
+        payload.confidence_threshold = payload.confidence_threshold / 100.0
+      }
+
+      await api.put('/settings', payload, { params: { user_id: userId } })
+    } catch (err) {
+      console.error('Failed to update user settings', err)
+    }
+  }
+
   const handleDeleteAll = async () => {
     if (!showDeleteConfirm) {
       setShowDeleteConfirm(true)
       return
     }
-    
+
     setDeleting(true)
     try {
       // In production, call API to delete user data
@@ -93,296 +113,280 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-4xl mx-auto space-y-10 pb-12">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Settings</h1>
-        <p className="text-muted-foreground">Manage your MailOS preferences</p>
+        <h1 className="text-3xl font-bold tracking-tight mb-2">Settings</h1>
+        <p className="text-muted-foreground">Manage your MailOS preferences and automation rules.</p>
       </div>
-      
-      {/* Gmail Account */}
-      <Card className="p-6">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold flex items-center gap-2 mb-2">
-              <Mail className="w-5 h-5" />
-              Connected Gmail Account
-            </h3>
-            <p className="text-muted-foreground">{user?.email || 'user@gmail.com'}</p>
-            <div className="mt-4 space-y-2">
-                <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${gmailStatus?.connected ? 'bg-green-500' : 'bg-red-500'}`} />
-                    <span className="text-sm text-foreground">
-                        {gmailStatus?.connected ? 'Connected' : 'Disconnected'}
-                    </span>
+
+      {/* Account & Synchronization */}
+      <section className="space-y-4">
+        <h2 className="text-xl font-semibold flex items-center gap-2 border-b pb-2">
+          <Mail className="w-5 h-5 text-primary" />
+          Account & Synchronization
+        </h2>
+        <Card className="divide-y">
+          {/* Gmail Connection */}
+          <div className="p-6 flex items-start justify-between">
+            <div className="space-y-1">
+              <h3 className="font-medium text-base">Connected Gmail Account</h3>
+              <p className="text-sm text-muted-foreground">{user?.email || 'user@gmail.com'}</p>
+
+              <div className="pt-3 flex items-center gap-3">
+                <div className="flex items-center gap-2 bg-secondary/50 px-2 py-1 rounded-md">
+                  <div className={`w-2 h-2 rounded-full ${gmailStatus?.connected ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-red-500'}`} />
+                  <span className="text-xs font-medium text-foreground">
+                    {gmailStatus?.connected ? 'Connected' : 'Disconnected'}
+                  </span>
                 </div>
-                
+
                 {gmailStatus?.connected && (
-                    <div className="flex items-center gap-3">
-                        <span className={`text-xs px-2 py-1 rounded border ${gmailStatus?.write_access ? 'bg-primary/10 border-primary text-primary' : 'bg-secondary border-border text-muted-foreground'}`}>
-                            {gmailStatus?.write_access ? 'Full Access (Read + Write)' : 'Read-Only Access'}
-                        </span>
-                        
-                        {!gmailStatus?.write_access && (
-                            <Button size="sm" variant="outline" onClick={handleUpgrade}>
-                                Enable Auto-Labeling (Grant Write Access)
-                            </Button>
-                        )}
-                    </div>
+                  <span className={`text-xs px-2 py-1 rounded-md font-medium border ${gmailStatus?.write_access ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-secondary border-border text-muted-foreground'}`}>
+                    {gmailStatus?.write_access ? 'Full Access (Read + Write)' : 'Read-Only Access'}
+                  </span>
                 )}
-            </div>
-          </div>
-          <Button variant="outline" onClick={() => signOut()}>Disconnect</Button>
-        </div>
-      </Card>
-      
-      {/* Inbox Action Mode */}
-      <Card className="p-6">
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground font-bold">A</span>
-            Inbox Action Mode
-          </h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            Control how AI organizes your emails.
-          </p>
-        </div>
-        
-        <div className="space-y-6">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="relative flex items-start gap-3 rounded-lg border p-4 shadow-sm hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => {}}>
-              <input
-                type="radio"
-                name="action_mode"
-                id="review_first"
-                defaultChecked={true}
-                className="mt-1 h-4 w-4"
-              />
-              <div className="space-y-1">
-                <label htmlFor="review_first" className="font-medium leading-none cursor-pointer">
-                  Review first
-                </label>
-                <p className="text-sm text-muted-foreground">
-                  AI suggests labels, but waits for your approval. Best for new users.
-                </p>
               </div>
             </div>
-            
-            <div className="relative flex items-start gap-3 rounded-lg border p-4 shadow-sm hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => {}}>
-              <input
-                type="radio"
-                name="action_mode"
-                id="auto_apply"
-                className="mt-1 h-4 w-4"
-              />
-              <div className="space-y-1">
-                <label htmlFor="auto_apply" className="font-medium leading-none cursor-pointer">
-                  Auto-apply
-                </label>
-                <p className="text-sm text-muted-foreground">
-                  AI automatically organizes emails with high confidence. Zero friction.
-                </p>
-              </div>
+            <div className="flex flex-col items-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => signOut()}>Disconnect</Button>
+              {gmailStatus?.connected && !gmailStatus?.write_access && (
+                <Button size="sm" variant="default" onClick={handleUpgrade} className="bg-primary/90 hover:bg-primary text-xs">
+                  Grant Write Access
+                </Button>
+              )}
             </div>
           </div>
-          
-          <div className="space-y-3 pt-2">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">Confidence Threshold</label>
-              <span className="text-sm text-muted-foreground">85%</span>
-            </div>
-            <input 
-              type="range" 
-              min="70" 
-              max="100" 
-              defaultValue="85" 
-              className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary" 
-            />
-            <p className="text-xs text-muted-foreground">
-              Only apply actions automatically when AI confidence is above 85%.
-            </p>
-          </div>
-        </div>
-      </Card>
-      
-      {/* AI Mode */}
-      <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4">AI Processing Mode</h3>
-        <div className="space-y-3">
-          <div className="flex items-center gap-3">
-            <input
-              type="radio"
-              id="cloud"
-              name="ai-mode"
-              value="cloud"
-              checked={aiMode === 'cloud'}
-              onChange={(e) => setAiMode(e.target.value)}
-              className="w-4 h-4"
-            />
-            <label htmlFor="cloud" className="flex-1 cursor-pointer">
-              <p className="font-medium">Cloud AI</p>
-              <p className="text-sm text-muted-foreground">Faster, more intelligent processing</p>
-            </label>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <input
-              type="radio"
-              id="local"
-              name="ai-mode"
-              value="local"
-              checked={aiMode === 'local'}
-              onChange={(e) => setAiMode(e.target.value)}
-              className="w-4 h-4"
-            />
-            <label htmlFor="local" className="flex-1 cursor-pointer">
-              <p className="font-medium">Local AI</p>
-              <p className="text-sm text-muted-foreground">Maximum privacy, runs on your device</p>
-            </label>
-          </div>
-        </div>
-      </Card>
-      
-      {/* Digest Time */}
-      <Card className="p-6">
-        <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
-          <Clock className="w-5 h-5" />
-          Digest Emails
-        </h3>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium mb-1">Receive digest emails</p>
-              <p className="text-sm text-muted-foreground">
-                Get a short summary of your inbox so you can scan what matters.
+
+          {/* Periodic Auto Fetch */}
+          <div className="p-6 flex items-center justify-between hover:bg-accent/10 transition-colors">
+            <div className="space-y-0.5">
+              <h3 className="font-medium text-base">Background Email Sync</h3>
+              <p className="text-sm text-muted-foreground max-w-lg">
+                Automatically fetch and analyze new emails in the background to ensure MailOS is always up to date.
               </p>
             </div>
             <button
-              onClick={() => setDigestEnabled(!digestEnabled)}
-              className={`w-12 h-6 rounded-full transition-colors ${
-                digestEnabled ? 'bg-primary' : 'bg-secondary'
-              } relative`}
+              onClick={() => {
+                const newStatus = !autoFetchEnabled;
+                setAutoFetchEnabled(newStatus);
+                handleSaveUserSettings({ auto_fetch_enabled: newStatus });
+              }}
+              className={`w-11 h-6 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary ${autoFetchEnabled ? 'bg-primary' : 'bg-secondary'} relative cursor-pointer`}
             >
-              <div
-                className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${
-                  digestEnabled ? 'translate-x-6' : 'translate-x-0.5'
-                }`}
-              ></div>
+              <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 shadow-sm transition-transform ${autoFetchEnabled ? 'translate-x-[22px]' : 'translate-x-[2px]'}`} />
             </button>
           </div>
 
-          <div className="flex flex-wrap gap-4 items-center">
-            <div className="flex items-center gap-3">
-              <label className="text-sm font-medium">Frequency</label>
-              <select
-                value={digestFrequency}
-                onChange={(e) =>
-                  setDigestFrequency(e.target.value === 'weekly' ? 'weekly' : 'daily')
-                }
-                className="px-3 py-2 rounded-lg bg-card border border-border text-sm"
-              >
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-              </select>
-            </div>
-            <div className="flex items-center gap-3">
-              <label className="text-sm font-medium">Delivery time</label>
-              <input
-                type="time"
-                value={digestTime}
-                onChange={(e) => setDigestTime(e.target.value)}
-                className="px-4 py-2 rounded-lg bg-card border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-            <Button onClick={handleSaveDigestSettings}>Save</Button>
-          </div>
-        </div>
-      </Card>
-      
-      {/* Privacy Mode */}
-      <Card className="p-6">
-        <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
-          <Lock className="w-5 h-5" />
-          Privacy Mode
-        </h3>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-medium mb-1">Strict Privacy</p>
-            <p className="text-sm text-muted-foreground">
-              Disable all analytics and tracking
-            </p>
-          </div>
-          <button
-            onClick={() => setPrivacyMode(!privacyMode)}
-            className={`w-12 h-6 rounded-full transition-colors ${
-              privacyMode ? 'bg-primary' : 'bg-secondary'
-            } relative`}
-          >
-            <div
-              className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${
-                privacyMode ? 'translate-x-6' : 'translate-x-0.5'
-              }`}
-            ></div>
-          </button>
-        </div>
-      </Card>
-      
-      {/* Data Management */}
-      <Card className="p-6 border-destructive/30">
-        <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
-          <Trash2 className="w-5 h-5" />
-          Data Management
-        </h3>
-        <div className="space-y-4">
-          <div>
-            <p className="font-medium mb-2">Delete all data</p>
-            <p className="text-sm text-muted-foreground mb-4">
-              Permanently delete all your cached emails and settings. This cannot be undone.
-            </p>
-            {showDeleteConfirm ? (
-              <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg space-y-3">
-                <div className="flex items-center gap-2 text-destructive">
-                  <AlertTriangle className="w-5 h-5" />
-                  <span className="font-medium">Are you sure? This action cannot be undone.</span>
-                </div>
-                <div className="flex gap-2">
-                  <Button 
-                    variant="destructive" 
-                    onClick={handleDeleteAll}
-                    disabled={deleting}
-                  >
-                    {deleting ? 'Deleting...' : 'Yes, Delete Everything'}
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setShowDeleteConfirm(false)}
-                    disabled={deleting}
-                  >
-                    Cancel
-                  </Button>
-                </div>
+          {/* Digest Settings */}
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="space-y-0.5">
+                <h3 className="font-medium text-base">Inbox Digests</h3>
+                <p className="text-sm text-muted-foreground max-w-lg">
+                  Receive a short, AI-summarized email digest of your inbox so you can quickly scan what matters.
+                </p>
               </div>
-            ) : (
-              <Button variant="destructive" onClick={handleDeleteAll}>
-                Delete Everything
-              </Button>
+              <button
+                onClick={() => setDigestEnabled(!digestEnabled)}
+                className={`w-11 h-6 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary ${digestEnabled ? 'bg-primary' : 'bg-secondary'} relative cursor-pointer`}
+              >
+                <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 shadow-sm transition-transform ${digestEnabled ? 'translate-x-[22px]' : 'translate-x-[2px]'}`} />
+              </button>
+            </div>
+
+            {digestEnabled && (
+              <div className="flex flex-wrap gap-4 items-end bg-accent/20 p-4 rounded-lg mt-2 border border-border/50">
+                <div className="space-y-1.5 flex-1 min-w-[200px]">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Frequency</label>
+                  <select
+                    value={digestFrequency}
+                    onChange={(e) => setDigestFrequency(e.target.value as 'daily' | 'weekly')}
+                    className="w-full px-3 py-2 rounded-md bg-background border border-border text-sm shadow-sm focus:outline-none focus:border-primary"
+                  >
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5 flex-1 min-w-[200px]">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Delivery time</label>
+                  <input
+                    type="time"
+                    value={digestTime}
+                    onChange={(e) => setDigestTime(e.target.value)}
+                    className="w-full px-3 py-2 rounded-md bg-background border border-border text-sm shadow-sm focus:outline-none focus:border-primary"
+                  />
+                </div>
+                <Button onClick={handleSaveDigestSettings} size="sm" className="mb-[1px]">Save Preferences</Button>
+              </div>
             )}
           </div>
-        </div>
-      </Card>
-      
-      {/* Logout */}
-      <Card className="p-6">
-        <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
-          <LogOut className="w-5 h-5" />
-          Session
-        </h3>
-        <p className="text-sm text-muted-foreground mb-4">
-          Log out of your account and return to the home page.
-        </p>
-        <Button variant="outline" onClick={handleSignOut}>
-          Sign Out
-        </Button>
-      </Card>
+        </Card>
+      </section>
+
+      {/* AI Intelligence & Automation */}
+      <section className="space-y-4 pt-4">
+        <h2 className="text-xl font-semibold flex items-center gap-2 border-b pb-2">
+          <span className="flex h-5 w-5 items-center justify-center rounded-sm bg-primary text-[11px] text-primary-foreground font-bold shadow-sm">AI</span>
+          Intelligence & Automation
+        </h2>
+        <Card className="divide-y">
+
+          {/* Action Mode Segmented Control */}
+          <div className="p-6 space-y-4">
+            <div className="space-y-0.5">
+              <h3 className="font-medium text-base">Inbox Action Mode</h3>
+              <p className="text-sm text-muted-foreground">Control how autonomously the AI organizes emails on your behalf.</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 p-1 bg-secondary/40 rounded-lg border">
+              <button
+                onClick={() => {
+                  setActionMode('review_first');
+                  handleSaveUserSettings({ action_mode: 'review_first' });
+                }}
+                className={`flex flex-col items-center justify-center p-3 rounded-md transition-all ${actionMode === 'review_first' ? 'bg-background shadow-sm border border-border ring-1 ring-primary/20' : 'hover:bg-background/50 text-muted-foreground'
+                  }`}
+              >
+                <div className={`font-semibold text-sm ${actionMode === 'review_first' ? 'text-primary' : ''}`}>Review First</div>
+                <div className="text-xs mt-1 text-center opacity-80">AI suggests, you approve</div>
+              </button>
+
+              <button
+                onClick={() => {
+                  setActionMode('auto_apply');
+                  handleSaveUserSettings({ action_mode: 'auto_apply' });
+                }}
+                className={`flex flex-col items-center justify-center p-3 rounded-md transition-all ${actionMode === 'auto_apply' ? 'bg-background shadow-sm border border-border ring-1 ring-primary/20' : 'hover:bg-background/50 text-muted-foreground'
+                  }`}
+              >
+                <div className={`font-semibold text-sm ${actionMode === 'auto_apply' ? 'text-primary' : ''}`}>Auto-Apply</div>
+                <div className="text-xs mt-1 text-center opacity-80">AI categorizes seamlessly</div>
+              </button>
+            </div>
+
+            {/* Threshold Slider (Only relevant if auto_apply or hybrid) */}
+            <div className="pt-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">Auto-Apply Confidence Threshold</label>
+                <span className="text-sm font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded">{confidenceThreshold}%</span>
+              </div>
+              <input
+                type="range"
+                min="70"
+                max="100"
+                value={confidenceThreshold}
+                onChange={(e) => setConfidenceThreshold(parseInt(e.target.value))}
+                onMouseUp={() => handleSaveUserSettings({ confidence_threshold: confidenceThreshold })}
+                onTouchEnd={() => handleSaveUserSettings({ confidence_threshold: confidenceThreshold })}
+                className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
+                disabled={actionMode !== 'auto_apply'}
+                style={{ opacity: actionMode === 'auto_apply' ? 1 : 0.5 }}
+              />
+              <p className="text-xs text-muted-foreground">
+                Automatic workflow actions only trigger when the AI confidence exceeds this threshold.
+              </p>
+            </div>
+          </div>
+
+          {/* AI Mode Segmented Control */}
+          <div className="p-6 space-y-4">
+            <div className="space-y-0.5">
+              <h3 className="font-medium text-base">Processing Engine</h3>
+              <p className="text-sm text-muted-foreground">Select where the AI language model executes.</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 p-1 bg-secondary/40 rounded-lg border">
+              <button
+                onClick={() => setAiMode('cloud')}
+                className={`flex justify-center items-center gap-2 p-2.5 rounded-md transition-all ${aiMode === 'cloud' ? 'bg-background shadow-sm border border-border' : 'hover:bg-background/50 text-muted-foreground'
+                  }`}
+              >
+                <span className={`font-medium text-sm ${aiMode === 'cloud' ? 'text-foreground' : ''}`}>Cloud Engine</span>
+              </button>
+
+              <button
+                onClick={() => setAiMode('local')}
+                className={`flex justify-center items-center gap-2 p-2.5 rounded-md transition-all ${aiMode === 'local' ? 'bg-background shadow-sm border border-border' : 'hover:bg-background/50 text-muted-foreground'
+                  }`}
+              >
+                <span className={`font-medium text-sm ${aiMode === 'local' ? 'text-foreground' : ''}`}>Local (On-Device)</span>
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Cloud provides maximum accuracy via OpenRouter. Local guarantees raw content never leaves the machine.
+            </p>
+          </div>
+        </Card>
+      </section>
+
+      {/* Privacy & Danger Zone */}
+      <section className="space-y-4 pt-4">
+        <h2 className="text-xl font-semibold flex items-center gap-2 border-b pb-2">
+          <Lock className="w-5 h-5 text-muted-foreground" />
+          Privacy & Data
+        </h2>
+        <Card className="divide-y overflow-hidden border-destructive/20">
+
+          <div className="p-6 flex items-center justify-between hover:bg-accent/5">
+            <div className="space-y-0.5">
+              <h3 className="font-medium text-base">Strict Privacy Mode</h3>
+              <p className="text-sm text-muted-foreground">Disable all aggregate usage telemetry.</p>
+            </div>
+            <button
+              onClick={() => setPrivacyMode(!privacyMode)}
+              className={`w-11 h-6 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary ${privacyMode ? 'bg-primary' : 'bg-secondary'} relative cursor-pointer`}
+            >
+              <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 shadow-sm transition-transform ${privacyMode ? 'translate-x-[22px]' : 'translate-x-[2px]'}`} />
+            </button>
+          </div>
+
+          <div className="p-6 flex items-center justify-between hover:bg-accent/5">
+            <div className="space-y-0.5">
+              <h3 className="font-medium text-base">Current Session</h3>
+              <p className="text-sm text-muted-foreground">Securely completely exit your workspace.</p>
+            </div>
+            <Button variant="secondary" size="sm" onClick={handleSignOut} className="w-24">
+              <LogOut className="w-4 h-4 mr-2 opacity-70" /> Sign Out
+            </Button>
+          </div>
+
+          <div className="p-6 bg-red-50/50 dark:bg-red-950/10 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <h3 className="font-medium text-base text-destructive">Erase Workspace Data</h3>
+                <p className="text-sm text-muted-foreground max-w-lg">
+                  Permanently delete all locally cached emails, extracted tasks, and application preferences. This cannot be undone.
+                </p>
+
+                {showDeleteConfirm && (
+                  <div className="mt-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex items-start gap-4 animate-in fade-in slide-in-from-top-2">
+                    <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+                    <div className="space-y-3 w-full">
+                      <p className="text-sm font-medium text-destructive">
+                        Are you absolutely sure you want to delete everything?
+                      </p>
+                      <div className="flex gap-2">
+                        <Button variant="destructive" size="sm" onClick={handleDeleteAll} disabled={deleting}>
+                          {deleting ? 'Erasing...' : 'Yes, Delete Everything'}
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => setShowDeleteConfirm(false)} disabled={deleting} className="bg-background">
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {!showDeleteConfirm && (
+                <Button variant="destructive" size="sm" onClick={() => setShowDeleteConfirm(true)} className="w-24">
+                  <Trash2 className="w-4 h-4 mr-2 opacity-70" /> Delete
+                </Button>
+              )}
+            </div>
+          </div>
+        </Card>
+      </section>
     </div>
   )
 }

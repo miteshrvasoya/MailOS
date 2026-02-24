@@ -134,6 +134,76 @@ class GmailService:
             print(f"Preview sync failed: {e}")
             raise e
 
+    def fetch_all_missing_emails(self) -> List[Dict[str, Any]]:
+        """
+        Fetch all missing emails by paginating through the INBOX.
+        Stops when it encounters a batch of emails that are mostly already in the database,
+        indicating we have caught up to the previously synced history.
+        """
+        from app.models.email import EmailInsight
+        
+        logger.info(f"GmailService: Fetching all missing emails for user {self.user.id}")
+        try:
+            service = self._get_service()
+            all_message_ids = []
+            page_token = None
+            max_pages = 20  # Safeguard against infinite loops (e.g. 20 * 100 = 2000 messages at max)
+            page_count = 0
+            
+            while page_count < max_pages:
+                page_count += 1
+                kwargs = {
+                    'userId': 'me',
+                    'q': 'in:inbox',
+                    'maxResults': 100
+                }
+                if page_token:
+                    kwargs['pageToken'] = page_token
+                    
+                results = service.users().messages().list(**kwargs).execute()
+                messages = results.get('messages', [])
+                
+                if not messages:
+                    break
+                    
+                # Extract IDs
+                batch_ids = [msg['id'] for msg in messages]
+                
+                # Check how many of these are already in the database
+                existing_count = 0
+                if batch_ids:
+                    stmt = select(EmailInsight.gmail_message_id).where(
+                        EmailInsight.user_id == self.user.id,
+                        EmailInsight.gmail_message_id.in_(batch_ids)
+                    )
+                    existing_msgs = self.db.exec(stmt).all()
+                    existing_set = set(existing_msgs)
+                    existing_count = len(existing_set)
+                    
+                    # Add only missing ones to our fetch list
+                    missing_ids = [mid for mid in batch_ids if mid not in existing_set]
+                    all_message_ids.extend(missing_ids)
+                
+                # Stop condition: if most of this batch is already in DB, we've caught up
+                if existing_count > len(batch_ids) * 0.8:  # 80% overlap means we've reached old emails
+                    logger.info(f"GmailService: Stopping pagination, found {existing_count}/{len(batch_ids)} existing emails in batch.")
+                    break
+                    
+                page_token = results.get('nextPageToken')
+                if not page_token:
+                    break
+            
+            logger.info(f"GmailService: Discovered {len(all_message_ids)} missing messages across {page_count} pages.")
+            
+            if not all_message_ids:
+                return []
+                
+            return self._fetch_messages_concurrent(all_message_ids)
+
+        except Exception as e:
+            logger.error(f"GmailService: Fetch all missing emails failed: {e}")
+            raise e
+
     def ensure_label(self, name: str) -> str:
         """
         Check if a label exists in Gmail. If not, create it.

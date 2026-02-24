@@ -13,6 +13,7 @@ from typing import List, Dict, Any, Optional
 from sqlmodel import Session, select, and_, func
 from app.models.email import EmailInsight
 from app.models.digest import Digest
+from app.core.ai import generate_digest_insights
 import uuid
 
 
@@ -73,6 +74,7 @@ def generate_digest(
         for email in cat_emails[:5]:  # Top 5 per category
             highlights.append({
                 "id": str(email.id),
+                "thread_id": email.thread_id,
                 "subject": email.subject or "No subject",
                 "sender": email.sender,
                 "importance": round(email.importance_score, 2),
@@ -88,8 +90,8 @@ def generate_digest(
             "highlights": highlights,
         })
 
-    # Generate text summary
-    summary = _generate_summary(digest_type, period_start, period_end, stats, sections)
+    # Generate text summary via AI
+    summary = generate_digest_insights(sections, digest_type, db, user_id)
 
     # Save digest
     digest = Digest(
@@ -106,45 +108,6 @@ def generate_digest(
     db.commit()
     db.refresh(digest)
     return digest
-
-
-def _generate_summary(
-    digest_type: str,
-    period_start: datetime,
-    period_end: datetime,
-    stats: Dict[str, Any],
-    sections: List[Dict[str, Any]],
-) -> str:
-    """Generate a human-readable text summary of the digest."""
-    period_label = "today" if digest_type == "daily" else "this week"
-    date_range = f"{period_start.strftime('%b %d')} – {period_end.strftime('%b %d, %Y')}"
-
-    lines = [
-        f"📬 Your {digest_type} digest ({date_range})",
-        "",
-        f"You received {stats['total_emails']} emails {period_label}.",
-    ]
-
-    if stats['important'] > 0:
-        lines.append(f"⭐ {stats['important']} marked as important.")
-    if stats['needs_reply'] > 0:
-        lines.append(f"💬 {stats['needs_reply']} need your reply.")
-    if stats['high_urgency'] > 0:
-        lines.append(f"🔴 {stats['high_urgency']} are high urgency.")
-
-    lines.append("")
-
-    for section in sections:
-        emoji = _category_emoji(section['category'])
-        lines.append(f"{emoji} {section['category']} ({section['count']} emails)")
-
-        for h in section['highlights'][:3]:
-            reply_marker = " 💬" if h['needs_reply'] else ""
-            lines.append(f"  • {h['subject']} — {h['sender']}{reply_marker}")
-
-        lines.append("")
-
-    return "\n".join(lines)
 
 
 def _category_emoji(category: str) -> str:

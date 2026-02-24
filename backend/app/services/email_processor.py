@@ -311,6 +311,26 @@ def _apply_classification_to_insight(
         )
         db.add(action)
     
+    # 4.5 Task Extraction
+    extracted_tasks = ai_result.get("tasks", [])
+    if extracted_tasks and isinstance(extracted_tasks, list):
+        for task_data in extracted_tasks:
+            try:
+                # Check for existing task for this email with same title
+                existing_task = db.exec(select(Task).where(Task.email_id == insight.id, Task.title == task_data.get("title"))).first()
+                if not existing_task and task_data.get("title"):
+                    new_task = Task(
+                        user_id=user.id,
+                        email_id=insight.id,
+                        title=task_data["title"],
+                        priority=task_data.get("priority", "medium"),
+                        status="pending"
+                        # skip due_date parsing for now unless strictly formatted
+                    )
+                    db.add(new_task)
+            except Exception as e:
+                logger.warning(f"Failed to create extracted task: {e}")
+    
     # 5. Notifications
     if insight.importance_score > 80 or insight.urgency == "high":
         # Check if notification exists?

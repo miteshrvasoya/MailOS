@@ -413,6 +413,78 @@ Emails:
         return results
 
 
+# ─── Digest Insight Generation ──────────────────────────────────
+
+def generate_digest_insights(
+    sections: list[Dict[str, Any]],
+    digest_type: str,
+    db=None,
+    user_id: Optional[uuid.UUID] = None,
+) -> str:
+    """
+    Generate a concise 2-3 sentence engaging summary highlighting key actions or notable corresponders 
+    across the provided digest sections.
+    """
+    if not sections:
+        return "Your inbox is clear. You have no new emails for this period."
+
+    # Build a prompt containing a simplified view of the top emails
+    email_contexts = []
+    for section in sections:
+        cat = section.get('category', 'Other')
+        for h in section.get('highlights', [])[:3]: # Only send the top 3 per category to keep token count low
+            email_contexts.append(
+                f"[{cat}] {h.get('sender', 'Unknown')} - {h.get('subject', 'No Subject')} "
+                f"(Reply needed: {h.get('needs_reply', False)}, Urgency: {h.get('urgency', 'low')})"
+            )
+            
+    joined_emails = "\n".join(email_contexts)
+    
+    system_message = (
+        "You are an executive assistant. Generate a short, friendly, and engaging 2-3 sentence summary "
+        "of the following emails. Do NOT list numbers or stats. Instead, highlight the most important people who emailed, "
+        "urgent actions needed, or general themes (e.g. 'You have a few urgent action items from Sarah and a "
+        "handful of newsletters to catch up on'). Be concise."
+    )
+    
+    messages = [
+        {"role": "system", "content": system_message},
+        {"role": "user", "content": f"Emails for this {digest_type}:\n{joined_emails}"},
+    ]
+
+    model = settings.AI_MODEL
+
+    try:
+        # We don't force JSON here, just a string response
+        response_data = _call_openrouter(
+            messages=messages,
+            model=model,
+            temperature=0.7, # Slightly higher temp for natural language
+        )
+
+        choice = response_data["choices"][0]
+        content = choice["message"]["content"].strip()
+        
+        # Log to DB if session provided
+        if db:
+            usage = response_data.get("usage", {})
+            latency_ms = response_data.get("_latency_ms", 0)
+            _save_log(
+                db=db, user_id=user_id, email_id=None, model=response_data.get("model", model),
+                messages=messages, temperature=0.7, response_content=content, parsed_result=None,
+                finish_reason=choice.get("finish_reason", "unknown"),
+                prompt_tokens=usage.get("prompt_tokens", 0), completion_tokens=usage.get("completion_tokens", 0),
+                total_tokens=usage.get("total_tokens", 0), cost=usage.get("cost", 0), latency_ms=latency_ms,
+                status="success", purpose="digest_insights",
+            )
+            
+        return content
+
+    except Exception as e:
+        logger.error(f"AI: Digest insight generation failed: {e}")
+        return "Here's a quick summary of your inbox for this period."
+
+
 # ─── Log Helper ───────────────────────────────────────────────────
 
 def _save_log(

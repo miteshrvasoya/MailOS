@@ -40,6 +40,7 @@ class User(SQLModel, table=True):
     # Sync State
     last_history_id: Optional[str] = Field(default=None) # Gmail historyId for incremental sync
     last_sync_at: Optional[datetime] = Field(default=None) # Timestamp of last successful sync
+    auto_fetch_enabled: bool = Field(default=True) # Whether background cron should fetch emails
 
     # Digest Settings
     digest_enabled: bool = Field(default=True)

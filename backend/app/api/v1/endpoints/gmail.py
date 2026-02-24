@@ -196,8 +196,8 @@ def _run_fetch_phase(user_id: uuid.UUID, limit: int, mode: str, force_full: bool
         # Full Sync Fallback
         if not raw_emails and (sync_type == "full" or not new_history_id):
             sync_type = "full"
-            logger.info(f"[SYNC] Full sync (limit={limit})")
-            raw_emails = service.fetch_preview_emails(limit=limit)
+            logger.info(f"[SYNC] Full sync (using fetch_all_missing_emails)")
+            raw_emails = service.fetch_all_missing_emails()
 
         fetch_elapsed = time.time() - fetch_start
         logger.info(f"[SYNC] Fetch complete: {len(raw_emails)} emails in {fetch_elapsed:.1f}s")
