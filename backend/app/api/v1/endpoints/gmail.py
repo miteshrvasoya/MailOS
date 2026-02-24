@@ -32,7 +32,11 @@ def get_gmail_status(
     if not cred:
         return {"connected": False, "write_access": False, "scopes": []}
 
-    scopes = cred.scopes.split(',') if cred.scopes else []
+    # Google scopes are typically space-separated strings
+    scopes = []
+    if cred.scopes:
+        scopes = cred.scopes.split(' ') if ' ' in cred.scopes else cred.scopes.split(',')
+        
     write_access = "https://www.googleapis.com/auth/gmail.modify" in scopes
 
     return {

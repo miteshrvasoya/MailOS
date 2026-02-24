@@ -11,11 +11,13 @@ class UserSettingsUpdate(BaseModel):
     auto_fetch_enabled: bool | None = None
     action_mode: str | None = None
     confidence_threshold: float | None = None
+    auto_create_events: bool | None = None
 
 class UserSettingsResponse(BaseModel):
     auto_fetch_enabled: bool
     action_mode: str
     confidence_threshold: float
+    auto_create_events: bool
 
 @router.get("/", response_model=UserSettingsResponse)
 def get_user_settings(
@@ -30,7 +32,8 @@ def get_user_settings(
     return UserSettingsResponse(
         auto_fetch_enabled=user.auto_fetch_enabled,
         action_mode=user.action_mode,
-        confidence_threshold=user.confidence_threshold
+        confidence_threshold=user.confidence_threshold,
+        auto_create_events=user.auto_create_events
     )
 
 @router.put("/", response_model=UserSettingsResponse)
@@ -50,6 +53,8 @@ def update_user_settings(
         user.action_mode = settings_in.action_mode
     if settings_in.confidence_threshold is not None:
         user.confidence_threshold = settings_in.confidence_threshold
+    if settings_in.auto_create_events is not None:
+        user.auto_create_events = settings_in.auto_create_events
         
     db.add(user)
     db.commit()
@@ -58,5 +63,6 @@ def update_user_settings(
     return UserSettingsResponse(
         auto_fetch_enabled=user.auto_fetch_enabled,
         action_mode=user.action_mode,
-        confidence_threshold=user.confidence_threshold
+        confidence_threshold=user.confidence_threshold,
+        auto_create_events=user.auto_create_events
     )

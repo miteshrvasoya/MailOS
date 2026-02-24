@@ -28,6 +28,7 @@ class User(SQLModel, table=True):
     # Action Mode Settings
     action_mode: str = Field(default="review_first") # "auto_apply" or "review_first"
     confidence_threshold: float = Field(default=0.85) # 0.0 to 1.0
+    auto_create_events: bool = Field(default=False) # Whether AI extracted dates auto-create Calendar Events
     
     # Gmail Integration
     # gmail_scopes removed in favor of GoogleCredential table

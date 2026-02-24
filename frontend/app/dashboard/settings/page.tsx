@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { Switch } from '@/components/ui/switch'
 import { Mail, Clock, Lock, Trash2, LogOut, AlertTriangle } from 'lucide-react'
 import { signIn } from 'next-auth/react'
 import { useAuth } from '@/hooks/useAuth'
@@ -24,6 +25,8 @@ export default function SettingsPage() {
   const [autoFetchEnabled, setAutoFetchEnabled] = useState(true)
   const [actionMode, setActionMode] = useState<'review_first' | 'auto_apply'>('review_first')
   const [confidenceThreshold, setConfidenceThreshold] = useState(85)
+  const [autoCreateEvents, setAutoCreateEvents] = useState(false)
+  const [isRefreshingGmail, setIsRefreshingGmail] = useState(false)
 
   // Fetch Gmail Status
   useEffect(() => {
@@ -32,7 +35,21 @@ export default function SettingsPage() {
         .then((res: any) => setGmailStatus(res.data))
         .catch((err: any) => console.error(err))
 
-      // Fetch digest settings
+      // Fetch digest and user settings
+      api.get('/settings', { params: { user_id: userId } })
+        .then((res: any) => {
+          if (res.data) {
+            setAutoFetchEnabled(res.data.auto_fetch_enabled !== false)
+            setActionMode(res.data.action_mode || 'review_first')
+            if (res.data.confidence_threshold) {
+              setConfidenceThreshold(Math.round(res.data.confidence_threshold * 100))
+            }
+            // Auto create events setting
+            setAutoCreateEvents(res.data.auto_create_events || false)
+          }
+        })
+        .catch((err: any) => console.error('Failed to load user settings', err))
+
       api.get('/digests/settings', { params: { user_id: userId } })
         .then((res: any) => {
           if (res.data) {
@@ -49,11 +66,13 @@ export default function SettingsPage() {
     }
   }, [userId])
 
-  const handleUpgrade = () => {
+  const handleUpgrade = async () => {
     trackEvent({ action: 'enable_auto_labeling', category: 'Settings', label: 'User clicked upgrade' })
-    signIn('google', {
+    setIsRefreshingGmail(true)
+    await signIn('google', {
       callbackUrl: '/dashboard/settings',
-      scope: "openid profile email https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.modify"
+      // Added Calendar Events scope for Auto Create Events
+      scope: "openid profile email https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/calendar.events"
     })
   }
 
@@ -78,7 +97,7 @@ export default function SettingsPage() {
     }
   }
 
-  const handleSaveUserSettings = async (updates: { auto_fetch_enabled?: boolean; action_mode?: string; confidence_threshold?: number }) => {
+  const handleSaveUserSettings = async (updates: { auto_fetch_enabled?: boolean; action_mode?: string; confidence_threshold?: number; auto_create_events?: boolean }) => {
     if (!userId) return
     try {
       // If we are updating threshold, convert it back from 85 -> 0.85
@@ -150,8 +169,8 @@ export default function SettingsPage() {
             <div className="flex flex-col items-end gap-2">
               <Button variant="outline" size="sm" onClick={() => signOut()}>Disconnect</Button>
               {gmailStatus?.connected && !gmailStatus?.write_access && (
-                <Button size="sm" variant="default" onClick={handleUpgrade} className="bg-primary/90 hover:bg-primary text-xs">
-                  Grant Write Access
+                <Button size="sm" variant="default" onClick={handleUpgrade} disabled={isRefreshingGmail} className="bg-primary/90 hover:bg-primary text-xs">
+                  {isRefreshingGmail ? "Updating Access..." : "Grant Write Access"}
                 </Button>
               )}
             </div>
@@ -159,39 +178,34 @@ export default function SettingsPage() {
 
           {/* Periodic Auto Fetch */}
           <div className="p-6 flex items-center justify-between hover:bg-accent/10 transition-colors">
-            <div className="space-y-0.5">
+            <div className="space-y-0.5 max-w-[80%]">
               <h3 className="font-medium text-base">Background Email Sync</h3>
-              <p className="text-sm text-muted-foreground max-w-lg">
+              <p className="text-sm text-muted-foreground w-full">
                 Automatically fetch and analyze new emails in the background to ensure MailOS is always up to date.
               </p>
             </div>
-            <button
-              onClick={() => {
-                const newStatus = !autoFetchEnabled;
-                setAutoFetchEnabled(newStatus);
-                handleSaveUserSettings({ auto_fetch_enabled: newStatus });
+            <Switch
+              checked={autoFetchEnabled}
+              onCheckedChange={(checked) => {
+                setAutoFetchEnabled(checked);
+                handleSaveUserSettings({ auto_fetch_enabled: checked });
               }}
-              className={`w-11 h-6 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary ${autoFetchEnabled ? 'bg-primary' : 'bg-secondary'} relative cursor-pointer`}
-            >
-              <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 shadow-sm transition-transform ${autoFetchEnabled ? 'translate-x-[22px]' : 'translate-x-[2px]'}`} />
-            </button>
+            />
           </div>
 
           {/* Digest Settings */}
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <div className="space-y-0.5">
+              <div className="space-y-0.5 max-w-[80%]">
                 <h3 className="font-medium text-base">Inbox Digests</h3>
-                <p className="text-sm text-muted-foreground max-w-lg">
+                <p className="text-sm text-muted-foreground w-full">
                   Receive a short, AI-summarized email digest of your inbox so you can quickly scan what matters.
                 </p>
               </div>
-              <button
-                onClick={() => setDigestEnabled(!digestEnabled)}
-                className={`w-11 h-6 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary ${digestEnabled ? 'bg-primary' : 'bg-secondary'} relative cursor-pointer`}
-              >
-                <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 shadow-sm transition-transform ${digestEnabled ? 'translate-x-[22px]' : 'translate-x-[2px]'}`} />
-              </button>
+              <Switch
+                checked={digestEnabled}
+                onCheckedChange={setDigestEnabled}
+              />
             </div>
 
             {digestEnabled && (
@@ -288,6 +302,24 @@ export default function SettingsPage() {
             </div>
           </div>
 
+          {/* Calendar Extraction */}
+          <div className="p-6 flex items-center justify-between hover:bg-accent/10 transition-colors">
+            <div className="space-y-0.5 max-w-[80%]">
+              <h3 className="font-medium text-base">Auto-Create Calendar Events</h3>
+              <p className="text-sm text-muted-foreground w-full">
+                Allow AI to automatically schedule Google Calendar events when a clear meeting date or time is extracted. Requires granting write access.
+              </p>
+            </div>
+            <Switch
+              checked={autoCreateEvents}
+              onCheckedChange={(checked) => {
+                setAutoCreateEvents(checked);
+                handleSaveUserSettings({ auto_create_events: checked });
+              }}
+              disabled={!(gmailStatus?.connected && gmailStatus?.write_access)}
+            />
+          </div>
+
           {/* AI Mode Segmented Control */}
           <div className="p-6 space-y-4">
             <div className="space-y-0.5">
@@ -328,16 +360,14 @@ export default function SettingsPage() {
         <Card className="divide-y overflow-hidden border-destructive/20">
 
           <div className="p-6 flex items-center justify-between hover:bg-accent/5">
-            <div className="space-y-0.5">
+            <div className="space-y-0.5 max-w-[80%]">
               <h3 className="font-medium text-base">Strict Privacy Mode</h3>
               <p className="text-sm text-muted-foreground">Disable all aggregate usage telemetry.</p>
             </div>
-            <button
-              onClick={() => setPrivacyMode(!privacyMode)}
-              className={`w-11 h-6 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary ${privacyMode ? 'bg-primary' : 'bg-secondary'} relative cursor-pointer`}
-            >
-              <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 shadow-sm transition-transform ${privacyMode ? 'translate-x-[22px]' : 'translate-x-[2px]'}`} />
-            </button>
+            <Switch
+              checked={privacyMode}
+              onCheckedChange={setPrivacyMode}
+            />
           </div>
 
           <div className="p-6 flex items-center justify-between hover:bg-accent/5">

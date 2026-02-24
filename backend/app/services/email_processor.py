@@ -314,20 +314,48 @@ def _apply_classification_to_insight(
     # 4.5 Task Extraction
     extracted_tasks = ai_result.get("tasks", [])
     if extracted_tasks and isinstance(extracted_tasks, list):
+        # Only initialize calendar service if we actually need it for this user
+        calendar_svc = None
+        if user.auto_create_events:
+            from app.services.calendar_service import CalendarService
+            try:
+                calendar_svc = CalendarService(user, db)
+            except Exception as e:
+                logger.warning(f"Could not init CalendarService for {user.id}: {e}")
+
         for task_data in extracted_tasks:
             try:
                 # Check for existing task for this email with same title
                 existing_task = db.exec(select(Task).where(Task.email_id == insight.id, Task.title == task_data.get("title"))).first()
                 if not existing_task and task_data.get("title"):
+                    
+                    parsed_due_date = None
+                    due_date_str = task_data.get("due_date")
+                    if due_date_str and isinstance(due_date_str, str) and due_date_str != "null":
+                        try:
+                            # Try simple YYYY-MM-DD parse
+                            parsed_due_date = datetime.strptime(due_date_str[:10], "%Y-%m-%d")
+                        except ValueError:
+                            logger.warning(f"Task extraction: Could not parse due_date '{due_date_str}'")
+
                     new_task = Task(
                         user_id=user.id,
                         email_id=insight.id,
                         title=task_data["title"],
                         priority=task_data.get("priority", "medium"),
-                        status="pending"
-                        # skip due_date parsing for now unless strictly formatted
+                        status="pending",
+                        due_date=parsed_due_date
                     )
                     db.add(new_task)
+                    
+                    # Auto Create Event
+                    if calendar_svc and parsed_due_date:
+                        calendar_svc.create_event(
+                            summary=f"Task: {new_task.title}",
+                            due_date=parsed_due_date,
+                            description=f"Auto-extracted from email: {insight.subject}\n\nLink: https://mail.google.com/mail/u/0/#all/{insight.thread_id if insight.thread_id else ''}"
+                        )
+                        
             except Exception as e:
                 logger.warning(f"Failed to create extracted task: {e}")
     
