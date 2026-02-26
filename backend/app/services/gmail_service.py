@@ -50,7 +50,8 @@ class GmailService:
             token_uri=cred_model.token_uri,
             client_id=settings.GOOGLE_CLIENT_ID,
             client_secret=settings.GOOGLE_CLIENT_SECRET,
-            scopes=cred_model.scopes.split(',') if cred_model.scopes else []
+            expiry=cred_model.expiry,
+            scopes=cred_model.scopes.split(' ') if cred_model.scopes and ' ' in cred_model.scopes else (cred_model.scopes.split(',') if cred_model.scopes else [])
         )
         
         if creds and creds.expired and creds.refresh_token:

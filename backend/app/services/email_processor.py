@@ -238,7 +238,10 @@ def _apply_classification_to_insight(
     
     tags = [f"AI:{category}"]
     if subcategory:
-        tags.append(f"Sub:{subcategory}")
+        # Clean subcategory formatting
+        clean_sub = subcategory.strip('\'" ')
+        clean_sub = " ".join([w.capitalize() for w in clean_sub.split(" ")])
+        tags.append(f"Sub:{clean_sub}")
     if intent:
         tags.append(f"Intent:{intent}")
         
@@ -361,11 +364,18 @@ def _apply_classification_to_insight(
     
     # 5. Notifications
     if insight.importance_score > 80 or insight.urgency == "high":
-        # Check if notification exists?
-        # For now, simplistic approach
+        # Pull dynamic subcategory or fall back to assigned group
+        notif_group = "Important Email"
+        for t in insight.classification_tags:
+            if isinstance(t, str) and t.startswith("Sub:"):
+                notif_group = t.split("Sub:", 1)[1]
+                break
+        if notif_group == "Important Email":
+            notif_group = assigned_group
+
         notif = Notification(
             user_id=insight.user_id,
-            title=f"Important: {insight.subject[:30]}...",
+            title=f"{notif_group}: {insight.subject[:30]}...",
             message=insight.explanation or "High importance email detected",
             category=NotificationCategory.EMAIL_INSIGHT,
             priority=NotificationPriority.HIGH,

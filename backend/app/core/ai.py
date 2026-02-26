@@ -114,23 +114,21 @@ def classify_email(
 
     clean_data = preprocess_email(subject, body, sender)
 
-    system_message = "You are an email assistant. Respond only in valid JSON."
-    user_message = f"""Analyze this email and return JSON. Use this taxonomy:
+    system_message = "You are an AI Email Assistant. Respond ONLY in valid JSON."
+    user_message = f"""Analyze this email and return a JSON object. We want a deep, dynamic classification.
 
-1. Work: Direct Communication, Notifications, Recruiting, Networking (LinkedIn etc), Newsletter
-2. Finance: Transactional, Banking, Investment (Market news/Demat), Security (OTP)
-3. Personal: Correspondence, Health, Travel
-4. Promo: Offers, Newsletter, Spam
+Instead of generic buckets, generate a highly specific `subcategory` that describes the exact nature of the email.
+Examples of dynamic subcategories: "Job Interviews", "E-commerce Orders", "Bank Transactions", "Software Subscriptions", "Team Updates", "Travel Bookings", "Food Delivery", "Account Security".
 
 Output JSON Schema:
 {{
-  "category": "High-level bucket (Work, Personal, Finance, Promo, Travel)",
-  "subcategory": "Specific sub-bucket (e.g. Networking, Investment, Banking, Recruiting)",
-  "intent": "Fine-grained intent (e.g. connection_request, market_news, otp, invoice, job_offer)",
+  "category": "Broad bucket (Work, Personal, Finance, Promo, Travel)",
+  "subcategory": "Create a highly specific, pluralized dynamic group name (e.g. 'Bank Transactions', 'Recruiting Updates', 'Software Alerts')",
+  "intent": "Fine-grained intent (e.g. connection_request, invoice, job_offer)",
   "importance_score": 0-100 (float),
   "needs_reply": boolean,
   "urgency": "low" | "medium" | "high",
-  "explanation": "Short reason",
+  "explanation": "Short reason why",
   "tasks": [
     {{
         "title": "Actionable task title",
@@ -271,18 +269,16 @@ def classify_emails_batch(
 
     joined = "\n\n".join(email_blocks)
 
-    system_message = "You are an email classification assistant. Respond ONLY with a valid JSON array."
-    user_message = f"""Classify these {len(emails)} emails using this taxonomy:
+    system_message = "You are an AI Email Classification assistant. Respond ONLY with a valid JSON array."
+    user_message = f"""Classify these {len(emails)} emails. We require deep, dynamic classification.
 
-1. Work: Direct Communication, Notifications, Recruiting, Networking (LinkedIn), Newsletter
-2. Finance: Transactional, Banking, Investment (Market news), Security (OTP)
-3. Personal: Correspondence, Health, Travel
-4. Promo: Offers, Newsletter, Spam
+Generate a highly specific, pluralized `subcategory` for each email that describes the precise nature of the message rather than a generic bucket.
+Examples: "Flight Confirmations", "Bank Transactions", "Newsletter Subscriptions", "Meeting Requests", "E-commerce Receipts", "Job Applications".
 
 Return a JSON array with exactly {len(emails)} objects. Schema:
 {{
   "category": "Work" | "Personal" | "Finance" | "Promo" | "Travel",
-  "subcategory": "e.g. Networking, Investment, Banking, Recruiting, Transactional",
+  "subcategory": "Highly specific, dynamic pluralized group name (e.g. 'Software Subscriptions', 'Job Interviews')",
   "intent": "e.g. connection_request, market_news, otp, invoice, meeting_request",
   "importance_score": 0-100,
   "needs_reply": boolean,

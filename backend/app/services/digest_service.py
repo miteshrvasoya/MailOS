@@ -125,21 +125,29 @@ def _derive_digest_category(email: EmailInsight) -> str:
     Derive a digest category using labels/tags when available for more precise grouping.
 
     Preference order:
-    1. AI:... tags (e.g. 'AI:Finance', 'AI:Work')
-    2. Rule:... tags (e.g. 'Rule:Job Applications')
-    3. email.category field
-    4. 'Uncategorized'
+    1. Sub:... tags (Dynamic AI subcategories e.g. 'Sub:Job Interviews')
+    2. AI:... tags (e.g. 'AI:Finance', 'AI:Work')
+    3. Rule:... tags (e.g. 'Rule:Job Applications')
+    4. email.category field
+    5. 'Uncategorized'
     """
     tags = getattr(email, "classification_tags", None) or []
 
-    # Prefer AI-derived category tags
+    # 1. Prefer Deep Dynamic Subcategory tags
+    for tag in tags:
+        if isinstance(tag, str) and tag.startswith("Sub:"):
+            value = tag.split("Sub:", 1)[1].strip()
+            if value:
+                return value
+
+    # 2. Fallback to broad AI-derived category tags
     for tag in tags:
         if isinstance(tag, str) and tag.startswith("AI:"):
             value = tag.split("AI:", 1)[1].strip()
             if value:
                 return value
 
-    # Fall back to rule-based tags
+    # 3. Fall back to rule-based tags
     for tag in tags:
         if isinstance(tag, str) and tag.startswith("Rule:"):
             value = tag.split("Rule:", 1)[1].strip()

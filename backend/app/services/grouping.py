@@ -95,11 +95,22 @@ def assign_group(email: EmailInsight, ai_result: Dict[str, Any], session: Sessio
         if pref and pref.preferred_group_name:
             return pref.preferred_group_name
 
-    # 4. Intent Map
+    # 4. Deep Dynamic Subcategory Generation
+    # If the AI generated a highly specific dynamic subcategory, we use it directly.
+    # We clean it slightly just in case.
+    subcategory = ai_result.get("subcategory")
+    if subcategory and isinstance(subcategory, str) and len(subcategory.strip()) > 3:
+        # Strip some common wrapper quotes if AI sends them
+        clean_sub = subcategory.strip('\'" ')
+        # Capitalize words for nice UI presentation (e.g. 'flight confirmations' -> 'Flight Confirmations')
+        clean_sub = " ".join([word.capitalize() for word in clean_sub.split(" ")])
+        return clean_sub
+
+    # 5. Intent Map (Legacy Fallback)
     if intent and intent in INTENT_GROUP_MAP:
         return INTENT_GROUP_MAP[intent]
 
-    # 5. Category Fallback
+    # 6. Category Fallback (Legacy Fallback)
     category = ai_result.get("category")
     if category and category in CATEGORY_GROUP_MAP:
         return CATEGORY_GROUP_MAP[category]
