@@ -55,20 +55,25 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
       return true;
     },
-    async session({ session, token }) {
-      if (session.user?.email) {
+    async jwt({ token, user }) {
+      // 'user' is only defined during the initial sign-in
+      if (user && user.email) {
         try {
           const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
-          const res = await fetch(`${backendUrl}/users/by-email/${session.user.email}`);
+          const res = await fetch(`${backendUrl}/users/by-email/${user.email}`);
           if (res.ok) {
             const userData = await res.json();
-            // Extend the session user object with backend data
-            session.user.id = userData.id;
-            // You can add other fields here like role, etc.
+            token.backendId = userData.id;
           }
         } catch (error) {
-          console.error("Error fetching user session data:", error);
+          console.error("Error fetching user data for JWT:", error);
         }
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (token && token.backendId) {
+        session.user.id = token.backendId as string;
       }
       return session;
     },
