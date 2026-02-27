@@ -69,9 +69,9 @@ app = FastAPI(
 
 # CORS: with allow_credentials=True, origins cannot be "*" (per spec). Use explicit list.
 _cors_origins = list(settings.BACKEND_CORS_ORIGINS) if settings.BACKEND_CORS_ORIGINS else []
-for origin in ("https://mail-os.vercel.app", "http://localhost:3000", "http://127.0.0.1:3000", "https://www.mailos.in", "https://mailos.in"):
-    if origin not in _cors_origins:
-        _cors_origins.append(origin)
+# for origin in ("https://mail-os.vercel.app", "http://localhost:3000", "http://127.0.0.1:3000", "https://www.mailos.in", "https://mailos.in"):
+#     if origin not in _cors_origins:
+#         _cors_origins.append(origin)
 
 app.add_middleware(
     CORSMiddleware,
@@ -80,9 +80,10 @@ app.add_middleware(
         "http://localhost:3000",
         "https://www.mailos.in",
         "https://mailos.in",
+        "https://www.mailos.in",
         "http://127.0.0.1:3000",
     ],
-    allow_origin_regex=r"https://.*\.vercel\.app|https://(?:www\.)?mailos\.in",
+    allow_origin_regex=r"https://.*\.vercel\.app|https://(?:www\.)?mailos\.in|https://www\.mailos\.in",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
