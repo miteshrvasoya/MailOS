@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     # Gmail Integration
     GOOGLE_CLIENT_ID: Optional[str] = None
     GOOGLE_CLIENT_SECRET: Optional[str] = None
-    GOOGLE_REDIRECT_URI: Optional[str] = "https://www.mailos.in/api/auth/callback/googleflowName=GeneralOAuthFlow"
+    GOOGLE_REDIRECT_URI: Optional[str] = "http://localhost:3000/api/auth/callback/google"
 
     # SMTP / Admin Notifications
     SMTP_HOST: str = "smtp.gmail.com"
