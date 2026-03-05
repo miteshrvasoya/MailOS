@@ -43,8 +43,8 @@ In the Render Web Service settings, go to the **Environment** tab and add the fo
 | `OPENAI_API_KEY` | Your OpenAI secret key |
 | `GOOGLE_CLIENT_ID` | From Google Cloud Console |
 | `GOOGLE_CLIENT_SECRET` | From Google Cloud Console |
-| `GOOGLE_REDIRECT_URI` | `https://your-frontend-url.vercel.app/api/auth/callback/google` |
-| `BACKEND_CORS_ORIGINS` | `["https://your-frontend-url.vercel.app"]` |
+| `GOOGLE_REDIRECT_URI` | `https://www.mailos.in/api/auth/callback/google` |
+| `BACKEND_CORS_ORIGINS` | `["https://www.mailos.in"]` |
 
 > [!TIP]
 > You can also use a single variable `SQLALCHEMY_DATABASE_URI` with the full connection string provided by Render if you prefer.
