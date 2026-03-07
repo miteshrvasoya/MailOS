@@ -41,30 +41,17 @@ export default function RootLayout({
 }
 
 export const metadata: Metadata = {
-  title: 'MailOS - Intelligent Inbox Management',
-  description: 'AI that understands your emails, prioritizes what matters, and sends you daily clarity.',
+  title: 'MailOS — Stop Missing Important Emails in 200+ Daily Messages',
+  description: 'Drowning in emails? MailOS detects what matters, groups the rest, and gives you one clean daily summary. Never miss an important email again.',
   generator: 'v0.app',
 
   icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
-    apple: '/apple-icon.png',
+    icon: '/Logo.jpg',
+    apple: '/Logo.jpg',
   },
   openGraph: {
-    title: 'MailOS - Intelligent Inbox Management',
-    description: 'AI that understands your emails, prioritizes what matters, and sends you daily clarity.',
+    title: 'MailOS — Stop Missing Important Emails in 200+ Daily Messages',
+    description: 'Drowning in emails? MailOS detects what matters, groups the rest, and gives you one clean daily summary. Never miss an important email again.',
     url: 'https://www.mailos.in/',
     siteName: 'MailOS',
     images: [
@@ -72,7 +59,7 @@ export const metadata: Metadata = {
         url: 'https://pub-2a4eb4e23d7d4d18bc7ca5d587d38902.r2.dev/landing-page-2.png',
         width: 1200,
         height: 630,
-        alt: 'MailOS Preview',
+        alt: 'MailOS — Inbox clarity on top of Gmail',
       },
     ],
     locale: 'en_US',
@@ -80,8 +67,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'MailOS - Intelligent Inbox Management',
-    description: 'AI that understands your emails, prioritizes what matters, and sends you daily clarity.',
+    title: 'MailOS — Stop Missing Important Emails in 200+ Daily Messages',
+    description: 'Drowning in emails? MailOS detects what matters, groups the rest, and gives you one clean daily summary. Never miss an important email again.',
     creator: '@mailos_precizn',
     images: ['https://pub-2a4eb4e23d7d4d18bc7ca5d587d38902.r2.dev/landing-page-2.png'],
   },
