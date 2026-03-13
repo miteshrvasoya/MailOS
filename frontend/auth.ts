@@ -28,7 +28,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
       // Store user in backend database
       try {
-        const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+        const isProd = process.env.NODE_ENV === 'production';
+        const defaultBackend = isProd ? 'https://mailos.onrender.com/api/v1' : 'http://localhost:8000/api/v1';
+        const backendUrl = process.env.NEXT_PUBLIC_API_URL || defaultBackend;
+
         const response = await fetch(`${backendUrl}/users/upsert`, {
           method: 'POST',
           headers: {
@@ -59,7 +62,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       // 'user' is only defined during the initial sign-in
       if (user && user.email) {
         try {
-          const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+          const isProd = process.env.NODE_ENV === 'production';
+          const defaultBackend = isProd ? 'https://mailos.onrender.com/api/v1' : 'http://localhost:8000/api/v1';
+          const backendUrl = process.env.NEXT_PUBLIC_API_URL || defaultBackend;
+
           const res = await fetch(`${backendUrl}/users/by-email/${user.email}`);
           if (res.ok) {
             const userData = await res.json();
