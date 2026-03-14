@@ -69,8 +69,12 @@ def get_sync_status(
     current_user: User = Depends(deps.get_current_user)
 ):
     if user_id != current_user.id:
+        logger.warning(f"[GMAIL] Unauthorized sync status request for {user_id} by {current_user.id}")
         raise HTTPException(status_code=403, detail="Not authorized to access this user's status")
-    return sync_manager.get_status(user_id)
+    
+    status = sync_manager.get_status(user_id)
+    logger.info(f"[GMAIL] /sync/status requested for {user_id}: {status.get('status')}")
+    return status
 
 
 @router.post("/sync")
@@ -80,15 +84,20 @@ def sync_gmail(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user)
 ):
+    logger.info(f"[GMAIL] /sync requested by {current_user.id} for target {req.user_id} (mode={req.mode})")
+    
     if req.user_id != current_user.id:
+        logger.warning(f"[GMAIL] Unauthorized sync request for {req.user_id}")
         raise HTTPException(status_code=403, detail="Not authorized to sync for this user")
 
     user = db.get(User, req.user_id)
     if not user:
+        logger.error(f"[GMAIL] User {req.user_id} not found during sync request")
         raise HTTPException(status_code=404, detail="User not found")
 
     current_status = sync_manager.get_status(req.user_id)
     if current_status.get("status") == "running":
+        logger.info(f"[GMAIL] Sync already running for {req.user_id}, returning early")
         return {"status": "running", "message": "Sync already in progress"}
 
     logger.info(f"Initiating two-phase sync for user {user.id} (mode={req.mode}, limit={req.limit})")

@@ -6,6 +6,9 @@ from app.models.user import User
 from app.models.google_credential import GoogleCredential
 from pydantic import BaseModel
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -39,7 +42,7 @@ def upsert_user(user_data: UserUpsert, db: Session = Depends(deps.get_db)):
     
     if db_user:
         # Update existing user
-        print(f"[USERS] Existing user found: {db_user.email} — skipping signup notification")
+        logger.info(f"[USERS] /upsert: Existing user found: {db_user.email} — skipping signup notification")
         db_user.full_name = user_data.full_name
         db_user.updated_at = datetime.utcnow()
         db.add(db_user)
@@ -47,7 +50,7 @@ def upsert_user(user_data: UserUpsert, db: Session = Depends(deps.get_db)):
         db.refresh(db_user)
     else:
         # Create new user
-        print(f"[USERS] NEW USER detected: {user_data.email} — will send signup notification")
+        logger.info(f"[USERS] /upsert: NEW USER detected: {user_data.email} — will send signup notification")
         new_user = User(
             email=user_data.email,
             full_name=user_data.full_name,
@@ -58,10 +61,10 @@ def upsert_user(user_data: UserUpsert, db: Session = Depends(deps.get_db)):
         db_user = new_user
         
         # Notify admin about new signup (non-blocking)
-        print(f"[USERS] Calling notify_new_user_signup...")
+        logger.info(f"[USERS] Calling notify_new_user_signup...")
         from app.services.admin_notifier import notify_new_user_signup
         notify_new_user_signup(user_email=db_user.email, user_name=db_user.full_name)
-        print(f"[USERS] notify_new_user_signup returned")
+        logger.info(f"[USERS] notify_new_user_signup returned")
     
     # Update Google Credentials
     if user_data.access_token:
@@ -95,9 +98,12 @@ def upsert_user(user_data: UserUpsert, db: Session = Depends(deps.get_db)):
 
 @router.get("/by-email/{email}", response_model=User)
 def read_user_by_email(email: str, db: Session = Depends(deps.get_db)):
+    logger.info(f"[USERS] /by-email requested for email: {email}")
     user = db.exec(select(User).where(User.email == email)).first()
     if not user:
+        logger.error(f"[USERS] /by-email FAILED: User not found for email: {email}")
         raise HTTPException(status_code=404, detail="User not found")
+    logger.info(f"[USERS] /by-email SUCCESS: returning user_id: {user.id}")
     return user
 
 @router.get("/{user_id}", response_model=User)

@@ -5,6 +5,9 @@ from app.models.email import EmailInsight
 from app.models.rule import Rule
 from app.models.user import User
 from app.services.digest_service import get_latest_digest
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -76,9 +79,15 @@ def get_dashboard_overview(
     Combined dashboard data for the main dashboard view.
     Includes stats, important emails, and today's digest preview (if available).
     """
+    logger.info(f"[DASHBOARD] /overview requested for user_id: {current_user.id} ({current_user.email})")
     user_id = current_user.id
 
-    stats = _compute_dashboard_stats(db, user_id)
+    try:
+        stats = _compute_dashboard_stats(db, user_id)
+        logger.info(f"[DASHBOARD] Stats computed successfully for user_id: {user_id}: {stats}")
+    except Exception as e:
+        logger.error(f"[DASHBOARD] FAILED to compute stats for user_id: {user_id}. Error: {e}")
+        raise
 
     # Important emails (top 5 by importance & recency)
     important_emails = db.exec(
