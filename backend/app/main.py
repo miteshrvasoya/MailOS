@@ -84,11 +84,18 @@ class AlwaysCORSMiddleware:
         async def send_with_cors(message: dict) -> None:
             if message["type"] == "http.response.start":
                 headers = MutableHeaders(scope=message)
-                headers.append("Access-Control-Allow-Origin", origin)
-                headers.append("Access-Control-Allow-Credentials", "true")
-                headers.append("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-                headers.append("Access-Control-Allow-Headers", "*")
-                headers.append("Vary", "Origin")
+                if "access-control-allow-origin" not in headers:
+                    headers.append("Access-Control-Allow-Origin", origin)
+                if "access-control-allow-credentials" not in headers:
+                    headers.append("Access-Control-Allow-Credentials", "true")
+                if "access-control-allow-methods" not in headers:
+                    headers.append("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+                if "access-control-allow-headers" not in headers:
+                    headers.append("Access-Control-Allow-Headers", "*")
+                
+                vary_val = headers.get("vary", "")
+                if "Origin" not in vary_val:
+                    headers.append("Vary", "Origin")
             await send(message)
 
         # Handle preflight here as a safety net
