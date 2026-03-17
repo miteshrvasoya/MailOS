@@ -5,9 +5,9 @@ import { useAuth } from '@/hooks/useAuth'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { 
-  Sparkles, Shield, Eye, Tag, Check, ChevronRight, 
-  Loader2, Mail, Brain, FileText, DollarSign, Megaphone, Briefcase 
+import {
+  Sparkles, Shield, Eye, Tag, Check, ChevronRight,
+  Loader2, Mail, Brain, FileText, DollarSign, Megaphone, Briefcase
 } from 'lucide-react'
 import api from '@/lib/api'
 import { trackEvent } from '@/lib/analytics'
@@ -30,7 +30,7 @@ export default function OnboardingPage() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
     CATEGORIES.filter(c => c.default).map(c => c.id)
   )
-  const [previewResults, setPreviewResults] = useState<{category: string, count: number}[]>([])
+  const [previewResults, setPreviewResults] = useState<{ category: string, count: number }[]>([])
   const [loading, setLoading] = useState(false)
   const [syncInProgress, setSyncInProgress] = useState(false)
 
@@ -50,7 +50,7 @@ export default function OnboardingPage() {
         console.error('Failed to save state:', e)
       }
     }
-    
+
     // If moving to preview step, kick off sync in the BACKGROUND (non-blocking)
     if (currentStep === 3) {
       setSyncInProgress(true)
@@ -66,7 +66,7 @@ export default function OnboardingPage() {
           setSyncInProgress(false)
         })
     }
-    
+
     setCurrentStep(prev => Math.min(prev + 1, STEPS.length - 1))
   }
 
@@ -83,7 +83,7 @@ export default function OnboardingPage() {
   }
 
   const toggleCategory = (id: string) => {
-    setSelectedCategories(prev => 
+    setSelectedCategories(prev =>
       prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]
     )
   }
@@ -92,12 +92,11 @@ export default function OnboardingPage() {
   const StepIndicator = () => (
     <div className="flex justify-center gap-2 mb-8">
       {STEPS.map((_, idx) => (
-        <div 
+        <div
           key={idx}
-          className={`w-2 h-2 rounded-full transition-all ${
-            idx === currentStep ? 'w-6 bg-primary' : 
-            idx < currentStep ? 'bg-primary/60' : 'bg-secondary'
-          }`}
+          className={`w-2 h-2 rounded-full transition-all ${idx === currentStep ? 'w-6 bg-primary' :
+              idx < currentStep ? 'bg-primary/60' : 'bg-secondary'
+            }`}
         />
       ))}
     </div>
@@ -118,9 +117,14 @@ export default function OnboardingPage() {
         <Button size="lg" onClick={nextStep} className="gap-2">
           Start Setup <ChevronRight className="h-4 w-4" />
         </Button>
-        <button 
-          onClick={() => router.push('/dashboard')}
-          className="block mx-auto mt-4 text-sm text-muted-foreground hover:underline"
+        <button
+          onClick={async () => {
+            if (userId) {
+              try { await api.post(`/onboarding/complete/${userId}`) } catch { }
+            }
+            router.push('/dashboard')
+          }}
+          className="block mx-auto mt-4 text-sm text-muted-foreground hover:text-foreground hover:underline underline-offset-4 transition-colors"
         >
           Skip for now
         </button>
@@ -141,7 +145,7 @@ export default function OnboardingPage() {
         <StepIndicator />
         <h2 className="text-2xl font-bold mb-2 text-center">How MailOS Works</h2>
         <p className="text-muted-foreground mb-8 text-center">Your privacy and control are our priorities.</p>
-        
+
         <div className="space-y-4 mb-8">
           {features.map((f, i) => (
             <div key={i} className="flex items-center gap-4 p-4 rounded-lg bg-secondary/30">
@@ -152,7 +156,7 @@ export default function OnboardingPage() {
             </div>
           ))}
         </div>
-        
+
         <Button className="w-full" size="lg" onClick={nextStep}>
           Continue <ChevronRight className="h-4 w-4 ml-2" />
         </Button>
@@ -167,18 +171,16 @@ export default function OnboardingPage() {
         <StepIndicator />
         <h2 className="text-2xl font-bold mb-2 text-center">How should MailOS organize?</h2>
         <p className="text-muted-foreground mb-8 text-center">You can change this anytime in Settings.</p>
-        
+
         <div className="grid gap-4 mb-8">
-          <div 
+          <div
             onClick={() => setActionMode('review_first')}
-            className={`p-5 rounded-xl border-2 cursor-pointer transition-all ${
-              actionMode === 'review_first' ? 'border-primary bg-primary/5' : 'border-border hover:bg-secondary/50'
-            }`}
+            className={`p-5 rounded-xl border-2 cursor-pointer transition-all ${actionMode === 'review_first' ? 'border-primary bg-primary/5' : 'border-border hover:bg-secondary/50'
+              }`}
           >
             <div className="flex items-start gap-4">
-              <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center ${
-                actionMode === 'review_first' ? 'border-primary bg-primary' : 'border-muted-foreground'
-              }`}>
+              <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center ${actionMode === 'review_first' ? 'border-primary bg-primary' : 'border-muted-foreground'
+                }`}>
                 {actionMode === 'review_first' && <Check className="h-4 w-4 text-primary-foreground" />}
               </div>
               <div>
@@ -187,17 +189,15 @@ export default function OnboardingPage() {
               </div>
             </div>
           </div>
-          
-          <div 
+
+          <div
             onClick={() => setActionMode('auto_apply')}
-            className={`p-5 rounded-xl border-2 cursor-pointer transition-all ${
-              actionMode === 'auto_apply' ? 'border-primary bg-primary/5' : 'border-border hover:bg-secondary/50'
-            }`}
+            className={`p-5 rounded-xl border-2 cursor-pointer transition-all ${actionMode === 'auto_apply' ? 'border-primary bg-primary/5' : 'border-border hover:bg-secondary/50'
+              }`}
           >
             <div className="flex items-start gap-4">
-              <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center ${
-                actionMode === 'auto_apply' ? 'border-primary bg-primary' : 'border-muted-foreground'
-              }`}>
+              <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center ${actionMode === 'auto_apply' ? 'border-primary bg-primary' : 'border-muted-foreground'
+                }`}>
                 {actionMode === 'auto_apply' && <Check className="h-4 w-4 text-primary-foreground" />}
               </div>
               <div>
@@ -207,7 +207,7 @@ export default function OnboardingPage() {
             </div>
           </div>
         </div>
-        
+
         <Button className="w-full" size="lg" onClick={nextStep}>
           Continue <ChevronRight className="h-4 w-4 ml-2" />
         </Button>
@@ -222,35 +222,32 @@ export default function OnboardingPage() {
         <StepIndicator />
         <h2 className="text-2xl font-bold mb-2 text-center">What should we organize?</h2>
         <p className="text-muted-foreground mb-8 text-center">Select the categories to focus on first.</p>
-        
+
         <div className="grid gap-3 mb-8">
           {CATEGORIES.map(cat => {
             const Icon = cat.icon
             const selected = selectedCategories.includes(cat.id)
             return (
-              <div 
+              <div
                 key={cat.id}
                 onClick={() => toggleCategory(cat.id)}
-                className={`p-4 rounded-lg border cursor-pointer transition-all flex items-center gap-4 ${
-                  selected ? 'border-primary bg-primary/5' : 'border-border hover:bg-secondary/50'
-                }`}
+                className={`p-4 rounded-lg border cursor-pointer transition-all flex items-center gap-4 ${selected ? 'border-primary bg-primary/5' : 'border-border hover:bg-secondary/50'
+                  }`}
               >
-                <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${
-                  selected ? 'bg-primary text-primary-foreground' : 'bg-secondary'
-                }`}>
+                <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${selected ? 'bg-primary text-primary-foreground' : 'bg-secondary'
+                  }`}>
                   <Icon className="h-5 w-5" />
                 </div>
                 <span className="font-medium flex-1">{cat.label}</span>
-                <div className={`h-5 w-5 rounded border flex items-center justify-center ${
-                  selected ? 'bg-primary border-primary' : 'border-muted-foreground'
-                }`}>
+                <div className={`h-5 w-5 rounded border flex items-center justify-center ${selected ? 'bg-primary border-primary' : 'border-muted-foreground'
+                  }`}>
                   {selected && <Check className="h-3 w-3 text-primary-foreground" />}
                 </div>
               </div>
             )
           })}
         </div>
-        
+
         <Button className="w-full" size="lg" onClick={nextStep} disabled={selectedCategories.length === 0}>
           Continue <ChevronRight className="h-4 w-4 ml-2" />
         </Button>
@@ -269,7 +266,7 @@ export default function OnboardingPage() {
         <p className="text-muted-foreground mb-8 text-center">
           {syncInProgress ? 'Sync is running in the background. You can continue anytime.' : 'Nothing has been changed yet.'}
         </p>
-        
+
         {syncInProgress && previewResults.length === 0 ? (
           <div className="flex flex-col items-center py-8 gap-3">
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -296,7 +293,7 @@ export default function OnboardingPage() {
             )}
           </div>
         )}
-        
+
         <Button className="w-full" size="lg" onClick={nextStep}>
           {previewResults.length > 0 ? 'Looks good' : 'Continue'} <ChevronRight className="h-4 w-4 ml-2" />
         </Button>
@@ -314,11 +311,11 @@ export default function OnboardingPage() {
         </div>
         <h2 className="text-2xl font-bold mb-3">Ready to organize!</h2>
         <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-          {actionMode === 'review_first' 
-            ? 'We\'ll suggest labels for you to approve.' 
+          {actionMode === 'review_first'
+            ? 'We\'ll suggest labels for you to approve.'
             : 'We\'ll automatically organize your inbox.'}
         </p>
-        
+
         <Button size="lg" onClick={completeOnboarding} className="gap-2">
           Go to Dashboard <ChevronRight className="h-4 w-4" />
         </Button>

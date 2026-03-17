@@ -44,6 +44,8 @@ export default function SuggestionsPage() {
   const [bulkProcessing, setBulkProcessing] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [undoItems, setUndoItems] = useState<UndoItem[]>([])
+  const [currentPage, setCurrentPage] = useState(1)
+  const ITEMS_PER_PAGE = 10
   const undoIntervalsRef = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map())
   const { userId } = useAuth()
 
@@ -62,6 +64,7 @@ export default function SuggestionsPage() {
       if (!userId) return
       const res = await api.get('/actions/pending-list', { params: { user_id: userId } })
       setActions(res.data)
+      setCurrentPage(1)
     } catch (error) {
       console.error('Failed to fetch actions:', error)
     } finally {
@@ -215,6 +218,9 @@ export default function SuggestionsPage() {
 
   const allSelected = actions.length > 0 && selected.size === actions.length
 
+  const totalPages = Math.ceil(actions.length / ITEMS_PER_PAGE)
+  const paginatedActions = actions.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
+
   // ─── Render ─────────────────────────────────────────────────────
 
   if (loading) {
@@ -346,7 +352,7 @@ export default function SuggestionsPage() {
           </div>
 
           <div className="grid gap-3">
-            {actions.map((action) => (
+            {paginatedActions.map((action) => (
               <Card
                 key={action.id}
                 className={`p-5 transition-all hover:shadow-md border-l-4 ${
@@ -436,6 +442,33 @@ export default function SuggestionsPage() {
               </Card>
             ))}
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-4 border-t border-border/50">
+              <p className="text-sm text-muted-foreground">
+                Page {currentPage} of {totalPages} &bull; {actions.length} total suggestions
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

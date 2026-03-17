@@ -87,7 +87,7 @@ export default function LandingPage() {
               <span className="text-foreground font-medium">clean daily summary</span>.
             </p>
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-center gap-4">
               {isLoggedIn ? (
                 <Button
                   size="lg"

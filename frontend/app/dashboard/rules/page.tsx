@@ -299,19 +299,19 @@ export default function RulesPage() {
         </Link>
       </div>
 
-      {/* AI Rule Creator - Dark Theme Optimized */}
+      {/* AI Rule Creator - Theme Optimized */}
       <div className="relative group">
         {/* Glow effect */}
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/30 via-purple-500/30 to-pink-500/30 rounded-2xl blur opacity-30 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/30 via-primary/20 to-tasks/30 rounded-2xl blur opacity-30 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
         
-        <Card className="relative border-border/50 shadow-xl bg-card/50 backdrop-blur-xl overflow-hidden">
+        <Card className="relative border-primary/20 shadow-xl bg-card/50 backdrop-blur-xl overflow-hidden">
              {/* Decorative Background Elements */}
-             <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none"></div>
-             <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-64 h-64 rounded-full bg-purple-500/10 blur-3xl pointer-events-none"></div>
+             <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-primary/5 blur-3xl pointer-events-none"></div>
+             <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-64 h-64 rounded-full bg-tasks/5 blur-3xl pointer-events-none"></div>
 
              <CardHeader className="relative pb-2">
                  <div className="flex items-center gap-2 mb-1">
-                     <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400">
+                     <div className="p-2 bg-primary/10 rounded-lg text-primary">
                         <Wand2 className="w-5 h-5" />
                      </div>
                      <div>
@@ -404,7 +404,7 @@ export default function RulesPage() {
                              {/* Actions Card */}
                              <div className="space-y-3">
                                  <Label className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Then</Label>
-                                 <div className="bg-card/50 p-4 rounded-xl border border-white/5 text-sm flex flex-col gap-2">
+                                 <div className="bg-card/50 p-4 rounded-xl border border-border/50 text-sm flex flex-col gap-2">
                                      {formatActions(parsedPreview.actions).map((a, i) => (
                                          <div key={i} className="flex items-center gap-2">
                                              <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]"></div>
