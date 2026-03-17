@@ -30,15 +30,21 @@ export default function DashboardPage() {
 
   const { toast } = useToast()
 
+  console.log("[Dashboard] Component rendering. userId:", userId, "user:", user);
+
   // Clean up polling on unmount
   useEffect(() => {
     return () => stopPolling()
   }, [])
 
   useEffect(() => {
+    console.log("[Dashboard] useEffect[userId] evaluating. userId:", userId);
     if (userId) {
+      console.log("[Dashboard] userId exists, calling fetchDashboardData and checkSyncStatus");
       fetchDashboardData()
       checkSyncStatus()
+    } else {
+      console.log("[Dashboard] userId is null or undefined, not fetching data");
     }
   }, [userId])
 
@@ -86,28 +92,44 @@ export default function DashboardPage() {
   }
 
   const checkSyncStatus = async () => {
-    if (!userId) return
+    console.log("[Dashboard] checkSyncStatus started. userId:", userId);
+    if (!userId) {
+      console.log("[Dashboard] checkSyncStatus aborted: no userId");
+      return
+    }
     try {
+      console.log(`[Dashboard] checkSyncStatus calling API: /gmail/sync/status/${userId}`);
       const res = await api.get(`/gmail/sync/status/${userId}`, {
         params: { user_id: userId },
       })
+      console.log("[Dashboard] checkSyncStatus API response:", res.data);
       if (res.data?.status === 'running') {
         setScanning(true)
         setSyncProgress(res.data.message || 'Resuming sync...')
         startPolling()
       }
     } catch (e) {
-      // ignore
+      console.error("[Dashboard] checkSyncStatus failed:", e);
     }
   }
 
   const fetchDashboardData = async () => {
-    if (!userId) return
+    console.log("[Dashboard] fetchDashboardData started. User ID: ", userId);
 
+    if (!userId) {
+      console.log("[Dashboard] fetchDashboardData aborted: no userId");
+      return
+    }
+
+    console.log("[Dashboard] Setting loading to true");
     setLoading(true)
     try {
+      console.log("[Dashboard] Calling API: /dashboard/overview");
       const res = await api.get('/dashboard/overview', { params: { user_id: userId } })
+      console.log("[Dashboard] /dashboard/overview response received:", res.status);
+      
       const { stats: s, important_emails, digest_preview } = res.data
+      console.log("[Dashboard] Processed stats and data:", s, "Emails count:", important_emails?.length);
 
       setStats([
         { label: 'Emails processed', value: s.total_emails.toString(), icon: Mail, color: 'text-foreground', borderColor: 'border-l-primary', bgColor: 'bg-primary/10' },
@@ -129,8 +151,9 @@ export default function DashboardPage() {
         setDigestPreviewSections([])
       }
     } catch (error) {
-      console.error("Failed to fetch dashboard data", error)
+      console.error("[Dashboard] Failed to fetch dashboard data API:", error)
     } finally {
+      console.log("[Dashboard] fetchDashboardData finally block. Setting loading to false.");
       setLoading(false)
     }
   }
