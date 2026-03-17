@@ -32,7 +32,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const isProd = process.env.NODE_ENV === 'production';
         const defaultBackend = isProd ? 'https://mailos.onrender.com/api/v1' : 'http://localhost:8000/api/v1';
         const backendUrl = process.env.NEXT_PUBLIC_API_URL || defaultBackend;
-        
+
         console.log(`[NextAuth] Upserting user to backend: ${backendUrl}/users/upsert`);
 
         const response = await fetch(`${backendUrl}/users/upsert`, {
@@ -65,7 +65,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
     async jwt({ token, user }) {
       console.log(`[NextAuth] jwt callback executing. backendId present? ${!!token.backendId}`);
-      
+
       // If we already have the backendId, we are good.
       if (token.backendId) {
         return token;
@@ -81,10 +81,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           const isProd = process.env.NODE_ENV === 'production';
           const defaultBackend = isProd ? 'https://mailos.onrender.com/api/v1' : 'http://localhost:8000/api/v1';
           const backendUrl = process.env.NEXT_PUBLIC_API_URL || defaultBackend;
-          
+
           console.log(`[NextAuth] Calling ${backendUrl}/users/by-email/${lookupEmail}`);
           const res = await fetch(`${backendUrl}/users/by-email/${lookupEmail}`, { cache: 'no-store' });
-          
+
           if (res.ok) {
             const userData = await res.json();
             token.backendId = userData.id;
