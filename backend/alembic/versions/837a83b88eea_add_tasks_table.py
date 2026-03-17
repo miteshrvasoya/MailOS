@@ -25,20 +25,43 @@ def upgrade() -> None:
                existing_type=sa.VARCHAR(),
                nullable=False,
                existing_server_default=sa.text("'pending'::character varying"))
-    op.alter_column('task', 'status',
-               existing_type=sa.VARCHAR(),
-               nullable=False,
-               existing_server_default=sa.text("'pending'::character varying"))
-    op.alter_column('task', 'priority',
-               existing_type=sa.VARCHAR(),
-               nullable=False,
-               existing_server_default=sa.text("'medium'::character varying"))
-    op.alter_column('task', 'created_at',
-               existing_type=postgresql.TIMESTAMP(),
-               nullable=False)
-    op.alter_column('task', 'updated_at',
-               existing_type=postgresql.TIMESTAMP(),
-               nullable=False)
+               
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    if not inspector.has_table('task'):
+        op.create_table('task',
+        sa.Column('id', sa.Uuid(), nullable=False),
+        sa.Column('user_id', sa.Uuid(), nullable=False),
+        sa.Column('email_id', sa.Uuid(), nullable=True),
+        sa.Column('title', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column('description', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+        sa.Column('status', sqlmodel.sql.sqltypes.AutoString(), nullable=False, server_default='pending'),
+        sa.Column('priority', sqlmodel.sql.sqltypes.AutoString(), nullable=False, server_default='medium'),
+        sa.Column('due_date', sa.DateTime(), nullable=True),
+        sa.Column('created_at', postgresql.TIMESTAMP(), nullable=False),
+        sa.Column('updated_at', postgresql.TIMESTAMP(), nullable=False),
+        sa.ForeignKeyConstraint(['email_id'], ['emailinsight.id'], ),
+        sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
+        sa.PrimaryKeyConstraint('id')
+        )
+        op.create_index(op.f('ix_task_status'), 'task', ['status'], unique=False)
+        op.create_index(op.f('ix_task_title'), 'task', ['title'], unique=False)
+    else:
+        op.alter_column('task', 'status',
+                   existing_type=sa.VARCHAR(),
+                   nullable=False,
+                   existing_server_default=sa.text("'pending'::character varying"))
+        op.alter_column('task', 'priority',
+                   existing_type=sa.VARCHAR(),
+                   nullable=False,
+                   existing_server_default=sa.text("'medium'::character varying"))
+        op.alter_column('task', 'created_at',
+                   existing_type=postgresql.TIMESTAMP(),
+                   nullable=False)
+        op.alter_column('task', 'updated_at',
+                   existing_type=postgresql.TIMESTAMP(),
+                   nullable=False)
+
     op.add_column('user', sa.Column('digest_enabled', sa.Boolean(), nullable=False, server_default=sa.text('true')))
     op.add_column('user', sa.Column('digest_frequency', sqlmodel.sql.sqltypes.AutoString(), nullable=False, server_default=sa.text("'daily'")))
     op.add_column('user', sa.Column('digest_time_local', sqlmodel.sql.sqltypes.AutoString(), nullable=True))
