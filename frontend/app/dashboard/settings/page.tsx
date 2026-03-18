@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
-import { Mail, Clock, Lock, Trash2, LogOut, AlertTriangle, Tag } from 'lucide-react'
+import { Mail, Clock, Lock, Trash2, LogOut, AlertTriangle } from 'lucide-react'
 import { signIn } from 'next-auth/react'
 import { useAuth } from '@/hooks/useAuth'
 import api from '@/lib/api'
@@ -32,10 +32,8 @@ export default function SettingsPage() {
   const [labelPrefix, setLabelPrefix] = useState('MailOS')
   const [savedPrefix, setSavedPrefix] = useState('MailOS')
   const [savingPrefix, setSavingPrefix] = useState(false)
-  const [showRenameConfirm, setShowRenameConfirm] = useState(false)
-  const [renameOldPrefix, setRenameOldPrefix] = useState('')
-  const [renaming, setRenaming] = useState(false)
-  const [renameResult, setRenameResult] = useState<{renamed: number, failed: number} | null>(null)
+  const [applyToExisting, setApplyToExisting] = useState(false)
+  const [prefixSaveSuccess, setPrefixSaveSuccess] = useState(false)
 
   // Fetch Gmail Status
   useEffect(() => {
@@ -58,6 +56,7 @@ export default function SettingsPage() {
               setLabelPrefix(res.data.label_prefix)
               setSavedPrefix(res.data.label_prefix)
             }
+            setApplyToExisting(res.data.apply_prefix_to_existing || false)
           }
         })
         .catch((err: any) => console.error('Failed to load user settings', err))
@@ -127,16 +126,13 @@ export default function SettingsPage() {
   const handleSaveLabelPrefix = async () => {
     if (!userId || !labelPrefix.trim()) return
     setSavingPrefix(true)
+    setPrefixSaveSuccess(false)
     try {
-      await api.put('/settings', { label_prefix: labelPrefix }, { params: { user_id: userId } })
-      const oldPrefix = savedPrefix
-      setSavedPrefix(labelPrefix)
-      // If prefix actually changed, ask about renaming existing labels
-      if (oldPrefix !== labelPrefix) {
-        setRenameOldPrefix(oldPrefix)
-        setRenameResult(null)
-        setShowRenameConfirm(true)
-      }
+      // Backend auto-renames existing labels if apply_prefix_to_existing is enabled
+      await api.put('/settings', { label_prefix: labelPrefix.trim() }, { params: { user_id: userId } })
+      setSavedPrefix(labelPrefix.trim())
+      setPrefixSaveSuccess(true)
+      setTimeout(() => setPrefixSaveSuccess(false), 3000)
     } catch (err) {
       console.error('Failed to save label prefix', err)
     } finally {
@@ -144,20 +140,13 @@ export default function SettingsPage() {
     }
   }
 
-  const handleRenameLabels = async () => {
+  const handleToggleApplyToExisting = async (checked: boolean) => {
+    setApplyToExisting(checked)
     if (!userId) return
-    setRenaming(true)
     try {
-      const res = await api.post('/settings/rename-labels', {
-        old_prefix: renameOldPrefix,
-        new_prefix: labelPrefix,
-      }, { params: { user_id: userId } })
-      setRenameResult({ renamed: res.data.renamed, failed: res.data.failed })
+      await api.put('/settings', { apply_prefix_to_existing: checked }, { params: { user_id: userId } })
     } catch (err) {
-      console.error('Failed to rename labels', err)
-      setRenameResult({ renamed: 0, failed: -1 })
-    } finally {
-      setRenaming(false)
+      console.error('Failed to update apply_prefix_to_existing', err)
     }
   }
 
@@ -289,7 +278,7 @@ export default function SettingsPage() {
             <div className="space-y-0.5">
               <h3 className="font-medium text-base">Gmail Label Prefix</h3>
               <p className="text-sm text-muted-foreground">
-                All emails organized by MailOS are labeled with this prefix in Gmail (e.g. <code className="text-xs bg-secondary px-1 py-0.5 rounded">{labelPrefix}/Work</code>).
+                All emails organized by MailOS are labeled with this prefix in Gmail (e.g. <code className="text-xs bg-secondary px-1 py-0.5 rounded">{labelPrefix || 'MailOS'}/Work</code>).
               </p>
             </div>
 
@@ -299,7 +288,7 @@ export default function SettingsPage() {
                 <input
                   type="text"
                   value={labelPrefix}
-                  onChange={(e) => setLabelPrefix(e.target.value.trim() || 'MailOS')}
+                  onChange={(e) => setLabelPrefix(e.target.value)}
                   placeholder="MailOS"
                   className="w-full px-3 py-2 rounded-md bg-background border border-border text-sm shadow-sm focus:outline-none focus:border-primary"
                 />
@@ -307,53 +296,26 @@ export default function SettingsPage() {
               <Button
                 size="sm"
                 className="mb-[1px]"
-                disabled={savingPrefix || labelPrefix === savedPrefix}
+                disabled={savingPrefix || labelPrefix.trim() === savedPrefix || !labelPrefix.trim()}
                 onClick={handleSaveLabelPrefix}
               >
-                {savingPrefix ? 'Saving...' : 'Save Prefix'}
+                {savingPrefix ? 'Saving...' : prefixSaveSuccess ? '✓ Saved' : 'Save Prefix'}
               </Button>
             </div>
 
-            {/* Rename confirmation dialog */}
-            {showRenameConfirm && (
-              <div className="mt-3 p-4 bg-primary/5 border border-primary/20 rounded-lg animate-in fade-in slide-in-from-top-2 space-y-3">
-                <div className="flex items-start gap-3">
-                  <Tag className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-foreground">
-                      Rename existing Gmail labels?
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      This will rename all labels from <code className="bg-secondary px-1 py-0.5 rounded">{renameOldPrefix}/*</code> to <code className="bg-secondary px-1 py-0.5 rounded">{labelPrefix}/*</code> in your Gmail account.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-2 ml-8">
-                  <Button
-                    size="sm"
-                    variant="default"
-                    disabled={renaming}
-                    onClick={handleRenameLabels}
-                  >
-                    {renaming ? 'Renaming...' : 'Yes, Rename All'}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={renaming}
-                    onClick={() => setShowRenameConfirm(false)}
-                  >
-                    No, Keep Old Labels
-                  </Button>
-                </div>
-                {renameResult && (
-                  <div className="ml-8 text-xs text-muted-foreground bg-secondary/50 p-3 rounded-lg border border-border/50 mt-2">
-                    <span className="font-medium text-foreground">{renameResult.renamed} renamed</span>
-                    {renameResult.failed > 0 && <span className="text-red-500 ml-2">({renameResult.failed} failed)</span>}
-                  </div>
-                )}
+            {/* Apply to existing labels toggle */}
+            <div className="flex items-center justify-between bg-accent/20 p-4 rounded-lg border border-border/50">
+              <div className="space-y-0.5 max-w-[80%]">
+                <h4 className="text-sm font-medium">Apply to previously labeled emails</h4>
+                <p className="text-xs text-muted-foreground">
+                  When enabled, changing the prefix will also rename all existing Gmail labels (e.g. <code className="bg-secondary px-0.5 rounded">OldPrefix/*</code> → <code className="bg-secondary px-0.5 rounded">NewPrefix/*</code>). When disabled, only new emails will use the new prefix.
+                </p>
               </div>
-            )}
+              <Switch
+                checked={applyToExisting}
+                onCheckedChange={handleToggleApplyToExisting}
+              />
+            </div>
           </div>
         </Card>
       </section>

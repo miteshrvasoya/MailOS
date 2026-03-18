@@ -33,6 +33,7 @@ class User(SQLModel, table=True):
     
     # Label Settings
     label_prefix: str = Field(default="MailOS")  # Prefix for Gmail labels, e.g. "MailOS/Work"
+    apply_prefix_to_existing: bool = Field(default=False)  # When changing prefix, also rename existing labels
     
     # Gmail Integration
     # gmail_scopes removed in favor of GoogleCredential table

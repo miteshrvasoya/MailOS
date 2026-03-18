@@ -20,6 +20,10 @@ def upgrade() -> None:
         op.add_column('user', sa.Column('label_prefix', sa.String(), server_default='MailOS', nullable=False))
     except Exception:
         pass  # Column may already exist
+    try:
+        op.add_column('user', sa.Column('apply_prefix_to_existing', sa.Boolean(), server_default='false', nullable=False))
+    except Exception:
+        pass
 
 
 def downgrade() -> None:
