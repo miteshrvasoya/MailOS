@@ -255,6 +255,86 @@ class GmailService:
             self.db.add(new_label)
             self.db.commit()
 
+    def rename_label_prefix(self, old_prefix: str, new_prefix: str) -> dict:
+        """
+        Rename all Gmail labels from old_prefix/* to new_prefix/*.
+        Returns dict with {renamed, failed, details}.
+        """
+        renamed = 0
+        failed = 0
+        details = []
+
+        try:
+            service = self._get_service()
+            response = service.users().labels().list(userId='me').execute()
+            labels = response.get('labels', [])
+
+            for label in labels:
+                label_name = label.get('name', '')
+                # Match labels that start with "old_prefix/" (case-insensitive start)
+                if label_name.lower().startswith(f"{old_prefix.lower()}/"):
+                    # Build new name: replace the prefix part
+                    suffix = label_name[len(old_prefix):]  # e.g. "/Work"
+                    new_name = f"{new_prefix}{suffix}"  # e.g. "MyApp/Work"
+
+                    try:
+                        service.users().labels().patch(
+                            userId='me',
+                            id=label['id'],
+                            body={"name": new_name}
+                        ).execute()
+
+                        # Update local DB cache
+                        db_label = self.db.exec(
+                            select(GmailLabel).where(
+                                GmailLabel.user_id == self.user.id,
+                                GmailLabel.gmail_id == label['id']
+                            )
+                        ).first()
+                        if db_label:
+                            db_label.name = new_name
+                            self.db.add(db_label)
+
+                        renamed += 1
+                        details.append(f"Renamed: {label_name} → {new_name}")
+                        logger.info(f"GmailService: Renamed label '{label_name}' → '{new_name}'")
+                    except Exception as e:
+                        failed += 1
+                        details.append(f"Failed: {label_name} — {str(e)}")
+                        logger.error(f"GmailService: Failed to rename label '{label_name}': {e}")
+
+            # Also handle exact match of the prefix itself (e.g. "MailOS" without slash)
+            for label in labels:
+                if label.get('name', '').lower() == old_prefix.lower():
+                    try:
+                        service.users().labels().patch(
+                            userId='me',
+                            id=label['id'],
+                            body={"name": new_prefix}
+                        ).execute()
+                        db_label = self.db.exec(
+                            select(GmailLabel).where(
+                                GmailLabel.user_id == self.user.id,
+                                GmailLabel.gmail_id == label['id']
+                            )
+                        ).first()
+                        if db_label:
+                            db_label.name = new_prefix
+                            self.db.add(db_label)
+                        renamed += 1
+                        details.append(f"Renamed: {old_prefix} → {new_prefix}")
+                    except Exception as e:
+                        failed += 1
+                        details.append(f"Failed: {old_prefix} — {str(e)}")
+
+            self.db.commit()
+
+        except Exception as e:
+            logger.error(f"GmailService: rename_label_prefix failed: {e}")
+            raise e
+
+        return {"renamed": renamed, "failed": failed, "details": details}
+
     def apply_label(self, gmail_message_id: str, gmail_label_id: str):
         """
         Apply a label to a message.

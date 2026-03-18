@@ -98,7 +98,7 @@ def approve_action(
     # Execute Approval Logic
     try:
         service = GmailService(current_user, db)
-        label_name = f"MailOS/{action.suggested_label}"
+        label_name = f"{current_user.label_prefix}/{action.suggested_label}"
         gmail_label_id = service.ensure_label(label_name)
 
         if action.email and action.email.gmail_message_id:
@@ -251,7 +251,7 @@ def bulk_approve(
 
         try:
             service = GmailService(user, db)
-            label_name = f"MailOS/{action.suggested_label}"
+            label_name = f"{user.label_prefix}/{action.suggested_label}"
             gmail_label_id = service.ensure_label(label_name)
 
             email = action.email

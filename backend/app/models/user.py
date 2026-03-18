@@ -31,6 +31,9 @@ class User(SQLModel, table=True):
     confidence_threshold: float = Field(default=0.85) # 0.0 to 1.0
     auto_create_events: bool = Field(default=False) # Whether AI extracted dates auto-create Calendar Events
     
+    # Label Settings
+    label_prefix: str = Field(default="MailOS")  # Prefix for Gmail labels, e.g. "MailOS/Work"
+    
     # Gmail Integration
     # gmail_scopes removed in favor of GoogleCredential table
     

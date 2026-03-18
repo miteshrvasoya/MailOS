@@ -308,7 +308,7 @@ def _apply_classification_to_insight(
         status = "auto_applied"
         if gmail_service and insight.gmail_message_id:
             try:
-                label_name = f"MailOS/{assigned_group}"
+                label_name = f"{user.label_prefix}/{assigned_group}"
                 label_id = gmail_service.ensure_label(label_name)
                 gmail_service.apply_label(insight.gmail_message_id, label_id)
             except Exception as e:

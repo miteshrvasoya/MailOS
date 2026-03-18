@@ -4,6 +4,9 @@ from app.api.deps import get_db
 from app.models.user import User
 from pydantic import BaseModel
 import uuid
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -12,12 +15,14 @@ class UserSettingsUpdate(BaseModel):
     action_mode: str | None = None
     confidence_threshold: float | None = None
     auto_create_events: bool | None = None
+    label_prefix: str | None = None
 
 class UserSettingsResponse(BaseModel):
     auto_fetch_enabled: bool
     action_mode: str
     confidence_threshold: float
     auto_create_events: bool
+    label_prefix: str
 
 @router.get("/", response_model=UserSettingsResponse)
 def get_user_settings(
@@ -33,7 +38,8 @@ def get_user_settings(
         auto_fetch_enabled=user.auto_fetch_enabled,
         action_mode=user.action_mode,
         confidence_threshold=user.confidence_threshold,
-        auto_create_events=user.auto_create_events
+        auto_create_events=user.auto_create_events,
+        label_prefix=user.label_prefix,
     )
 
 @router.put("/", response_model=UserSettingsResponse)
@@ -55,6 +61,8 @@ def update_user_settings(
         user.confidence_threshold = settings_in.confidence_threshold
     if settings_in.auto_create_events is not None:
         user.auto_create_events = settings_in.auto_create_events
+    if settings_in.label_prefix is not None:
+        user.label_prefix = settings_in.label_prefix
         
     db.add(user)
     db.commit()
@@ -64,5 +72,47 @@ def update_user_settings(
         auto_fetch_enabled=user.auto_fetch_enabled,
         action_mode=user.action_mode,
         confidence_threshold=user.confidence_threshold,
-        auto_create_events=user.auto_create_events
+        auto_create_events=user.auto_create_events,
+        label_prefix=user.label_prefix,
     )
+
+
+# ─── Label Prefix Rename ─────────────────────────────────────────
+
+class RenamePrefixRequest(BaseModel):
+    old_prefix: str
+    new_prefix: str
+
+class RenamePrefixResponse(BaseModel):
+    renamed: int
+    failed: int
+    details: list
+
+@router.post("/rename-labels", response_model=RenamePrefixResponse)
+def rename_label_prefix(
+    req: RenamePrefixRequest,
+    user_id: uuid.UUID = Query(...),
+    db: Session = Depends(get_db),
+):
+    """
+    Rename all existing Gmail labels from old_prefix/* to new_prefix/*
+    and update the local DB cache.
+    """
+    user = db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if not req.old_prefix or not req.new_prefix:
+        raise HTTPException(status_code=400, detail="Prefixes cannot be empty")
+    if req.old_prefix == req.new_prefix:
+        return RenamePrefixResponse(renamed=0, failed=0, details=["Prefixes are the same — nothing to do"])
+
+    try:
+        from app.services.gmail_service import GmailService
+        gmail = GmailService(user, db)
+        result = gmail.rename_label_prefix(req.old_prefix, req.new_prefix)
+        return RenamePrefixResponse(**result)
+    except Exception as e:
+        logger.error(f"Label rename failed for user {user_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Rename failed: {str(e)}")
+
