@@ -41,6 +41,11 @@ class EmailInsight(SQLModel, table=True):
     # Sync Status
     classification_status: str = Field(default="pending")  # pending, classifying, classified, failed
 
+    # Auto-Clean Tracking
+    auto_clean_rule_id: Optional[uuid.UUID] = Field(default=None, foreign_key="autocleanrule.id", index=True)
+    scheduled_clean_at: Optional[datetime] = Field(default=None)  # when the action should execute
+    clean_action_status: str = Field(default="none")  # none, pending, completed, failed
+
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     # Relationships

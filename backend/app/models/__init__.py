@@ -11,11 +11,12 @@ from .digest import Digest
 from .notification import Notification
 from .ai_log import AILog
 from .task import Task
+from .auto_clean_rule import AutoCleanRule
 
 # For Alembic/SQLModel to detect
 __all__ = [
     "User", "EmailInsight", "Rule", "UserIntentPreference", 
     "EmailAction", "GmailLabel", "GoogleCredential", 
     "Category", "SnoozedEmail", "Digest", "Notification",
-    "AILog", "Task"
+    "AILog", "Task", "AutoCleanRule"
 ]

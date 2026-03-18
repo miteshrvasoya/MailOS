@@ -198,9 +198,17 @@ def classify_stored_emails(
     classify_elapsed = time.time() - classify_start
     logger.info(f"EmailProcessor: AI classification complete in {classify_elapsed:.1f}s")
 
-    # 4. Integrate Results
+    # 4. Integrate Results + Auto-Clean Evaluation
     sync_manager.set_phase(user.id, "storing_results", "Saving classification results...")
-    
+
+    # Lazy-init the auto-clean engine for this user
+    auto_clean_engine = None
+    try:
+        from app.services.auto_clean_engine import AutoCleanEngine
+        auto_clean_engine = AutoCleanEngine(db, user)
+    except Exception as e:
+        logger.warning(f"EmailProcessor: Could not init AutoCleanEngine: {e}")
+
     for i, ai_result in enumerate(all_ai_results):
         insight = insight_map.get(i)
         if not insight:
@@ -210,6 +218,14 @@ def classify_stored_emails(
             _apply_classification_to_insight(db, user, insight, ai_result, gmail_service)
             insight.classification_status = "classified"
             stats.classified += 1
+
+            # Auto-clean: evaluate newly classified email against rules
+            if auto_clean_engine:
+                try:
+                    auto_clean_engine.evaluate_email(insight)
+                except Exception as acl_err:
+                    logger.warning(f"AutoClean eval failed for {insight.id}: {acl_err}")
+
         except Exception as e:
             logger.error(f"Failed to apply classification for {insight.id}: {e}")
             insight.classification_status = "failed"

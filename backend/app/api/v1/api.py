@@ -16,6 +16,7 @@ from app.api.v1.endpoints import (
     ai_logs,
     tasks,
     insights,
+    auto_clean,
 )
 
 api_router = APIRouter()
@@ -35,4 +36,5 @@ api_router.include_router(digests.router, prefix="/digests", tags=["digests"])
 api_router.include_router(ai_logs.router, prefix="/ai-logs", tags=["ai-logs"])
 api_router.include_router(tasks.router, prefix="/tasks", tags=["tasks"])
 api_router.include_router(insights.router, prefix="/insights", tags=["insights"])
+api_router.include_router(auto_clean.router, prefix="/auto-clean-rules", tags=["auto-clean"])
 

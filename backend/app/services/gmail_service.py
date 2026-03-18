@@ -301,6 +301,45 @@ class GmailService:
             "body": snippet
         }
 
+    # ─── Auto-Clean Actions ─────────────────────────────────────────
+
+    def trash_message(self, message_id: str) -> bool:
+        """Move a message to Gmail Trash. Returns True on success."""
+        try:
+            service = self._get_service()
+            service.users().messages().trash(userId='me', id=message_id).execute()
+            logger.info(f"GmailService: Trashed message {message_id} for user {self.user.id}")
+            return True
+        except Exception as e:
+            logger.error(f"GmailService: Failed to trash message {message_id}: {e}")
+            return False
+
+    def delete_message(self, message_id: str) -> bool:
+        """Permanently delete a message. Returns True on success."""
+        try:
+            service = self._get_service()
+            service.users().messages().delete(userId='me', id=message_id).execute()
+            logger.info(f"GmailService: Permanently deleted message {message_id} for user {self.user.id}")
+            return True
+        except Exception as e:
+            logger.error(f"GmailService: Failed to delete message {message_id}: {e}")
+            return False
+
+    def archive_message(self, message_id: str) -> bool:
+        """Archive a message (remove INBOX label). Returns True on success."""
+        try:
+            service = self._get_service()
+            service.users().messages().modify(
+                userId='me',
+                id=message_id,
+                body={'removeLabelIds': ['INBOX']}
+            ).execute()
+            logger.info(f"GmailService: Archived message {message_id} for user {self.user.id}")
+            return True
+        except Exception as e:
+            logger.error(f"GmailService: Failed to archive message {message_id}: {e}")
+            return False
+
     def get_profile(self) -> Dict[str, Any]:
         """Get Gmail profile including current historyId."""
         try:

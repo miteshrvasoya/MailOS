@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from .snoozed_email import SnoozedEmail
     from .digest import Digest
     from .task import Task
+    from .auto_clean_rule import AutoCleanRule
 
 
 
@@ -60,5 +61,6 @@ class User(SQLModel, table=True):
     snoozed_emails: List["SnoozedEmail"] = Relationship(back_populates="user")
     digests: List["Digest"] = Relationship(back_populates="user")
     tasks: List["Task"] = Relationship(back_populates="user")
+    auto_clean_rules: List["AutoCleanRule"] = Relationship(back_populates="user")
 
 
