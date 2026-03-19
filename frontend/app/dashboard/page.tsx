@@ -11,9 +11,6 @@ import api, { EmailInsight } from '@/lib/api'
 import { trackEvent, AnalyticsCategories } from '@/lib/analytics'
 import { useToast } from '@/components/ui/use-toast'
 
-const DEBUG_ENDPOINT = 'http://127.0.0.1:7489/ingest/e464efb9-3f59-4123-a70c-2cb6541aad5c'
-const DEBUG_SESSION_ID = '22f7dc'
-
 export default function DashboardPage() {
   const { user, userId } = useAuth()
   const router = useRouter()
@@ -33,39 +30,15 @@ export default function DashboardPage() {
 
   const { toast } = useToast()
 
-  console.log("[Dashboard] Component rendering. userId:", userId, "user:", user);
-
   // Clean up polling on unmount
   useEffect(() => {
     return () => stopPolling()
   }, [])
 
   useEffect(() => {
-    console.log("[Dashboard] useEffect[userId] evaluating. userId:", userId);
-    // #region debug log H1_dashboard_userId_gate
-    fetch(DEBUG_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Debug-Session-Id': DEBUG_SESSION_ID,
-      },
-      body: JSON.stringify({
-        sessionId: DEBUG_SESSION_ID,
-        runId: 'debug_initial',
-        hypothesisId: 'H1_missing_user_id_in_nextauth_session',
-        location: 'frontend/app/dashboard/page.tsx:useEffect[userId]',
-        message: 'Dashboard userId gate tick',
-        data: { userIdPresent: !!userId, hasUser: !!user },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {})
-    // #endregion
     if (userId) {
-      console.log("[Dashboard] userId exists, calling fetchDashboardData and checkSyncStatus");
       fetchDashboardData()
       checkSyncStatus()
-    } else {
-      console.log("[Dashboard] userId is null or undefined, not fetching data");
     }
   }, [userId])
 
@@ -107,50 +80,38 @@ export default function DashboardPage() {
           stopPolling()
         }
       } catch (e) {
-        console.error("Poll failed", e)
+        // ignore polling errors to avoid breaking the dashboard UI
       }
     }, 10000)
   }
 
   const checkSyncStatus = async () => {
-    console.log("[Dashboard] checkSyncStatus started. userId:", userId);
     if (!userId) {
-      console.log("[Dashboard] checkSyncStatus aborted: no userId");
       return
     }
     try {
-      console.log(`[Dashboard] checkSyncStatus calling API: /gmail/sync/status/${userId}`);
       const res = await api.get(`/gmail/sync/status/${userId}`, {
         params: { user_id: userId },
       })
-      console.log("[Dashboard] checkSyncStatus API response:", res.data);
       if (res.data?.status === 'running') {
         setScanning(true)
         setSyncProgress(res.data.message || 'Resuming sync...')
         startPolling()
       }
     } catch (e) {
-      console.error("[Dashboard] checkSyncStatus failed:", e);
+      // ignore
     }
   }
 
   const fetchDashboardData = async () => {
-    console.log("[Dashboard] fetchDashboardData started. User ID: ", userId);
-
     if (!userId) {
-      console.log("[Dashboard] fetchDashboardData aborted: no userId");
       return
     }
-
-    console.log("[Dashboard] Setting loading to true");
     setLoading(true)
     try {
-      console.log("[Dashboard] Calling API: /dashboard/overview");
       const res = await api.get('/dashboard/overview', { params: { user_id: userId } })
-      console.log("[Dashboard] /dashboard/overview response received:", res.status);
       
       const { stats: s, important_emails, digest_preview } = res.data
-      console.log("[Dashboard] Processed stats and data:", s, "Emails count:", important_emails?.length);
 
       setStats([
         { label: 'Emails processed', value: s.total_emails.toString(), icon: Mail, color: 'text-foreground', borderColor: 'border-l-primary', bgColor: 'bg-primary/10' },
@@ -172,9 +133,8 @@ export default function DashboardPage() {
         setDigestPreviewSections([])
       }
     } catch (error) {
-      console.error("[Dashboard] Failed to fetch dashboard data API:", error)
+      // ignore; dashboard will re-try on next sync/poll
     } finally {
-      console.log("[Dashboard] fetchDashboardData finally block. Setting loading to false.");
       setLoading(false)
     }
   }
@@ -206,7 +166,6 @@ export default function DashboardPage() {
       startPolling()
 
     } catch (error) {
-      console.error("Scan failed", error);
       toast({
         title: "Scan failed",
         description: "There was an error triggering the sync.",
