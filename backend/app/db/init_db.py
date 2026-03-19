@@ -3,8 +3,38 @@ from sqlalchemy import create_engine, text
 from app.core.config import settings
 from alembic import command, config
 import os
+import json
+import time
 
 logger = logging.getLogger(__name__)
+
+def _debug_append_ndjson(event: str, data: dict | None = None):
+    """
+    Append a small NDJSON debug line to the current debug session file (if present).
+    This is only for runtime evidence in debug mode.
+    """
+    try:
+        # This matches the folder where the debug logs we read earlier are stored.
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # backend/
+        cursor_dir = os.path.join(repo_root, ".cursor")
+        log_path = os.path.join(cursor_dir, "debug-22f7dc.log")
+
+        payload = {
+            "sessionId": "22f7dc",
+            "runId": "backend_migration_startup",
+            "hypothesisId": "H_schema_columns_missing",
+            "location": "backend/app/db/init_db.py",
+            "message": event,
+            "data": data or {},
+            "timestamp": int(time.time() * 1000),
+        }
+
+        # Create the file if it doesn't exist; append mode otherwise.
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(payload) + "\n")
+    except Exception:
+        # Never fail startup because debugging isn't available.
+        return
 
 def init_db():
     """
@@ -50,6 +80,7 @@ def init_db():
             logger.info("RUN_MIGRATIONS_ON_STARTUP=false, skipping Alembic migrations on startup.")
             return
 
+        _debug_append_ndjson("migrations_start", {"RUN_MIGRATIONS_ON_STARTUP": run_migrations})
         logger.info("Running Alembic migrations...")
         # __file__ is app/db/init_db.py -> backend/app/db/init_db.py
         current_file = os.path.abspath(__file__)
@@ -80,6 +111,7 @@ def init_db():
         logger.info(f"Running migrations with database: {settings.POSTGRES_DB}")
         command.upgrade(alembic_cfg, "head")
         logger.info("Alembic migrations completed successfully.")
+        _debug_append_ndjson("migrations_done", {"status": "ok"})
     except Exception as e:
         logger.error(f"Error running migrations: {e}", exc_info=True)
         # Don't raise - allow app to start even if migrations fail
@@ -87,3 +119,37 @@ def init_db():
             "Continuing startup despite migration error. "
             "Please check logs and fix migrations manually."
         )
+        _debug_append_ndjson("migrations_error", {"error": str(e)})
+
+    # 3. Safety net: ensure critical `user` columns exist.
+    # This prevents runtime crashes when the DB schema lags behind the model
+    # (common when migrations fail or didn't run on a particular deploy).
+    try:
+        logger.info("Ensuring critical `user` columns exist (schema safety net)...")
+        # Add a short connect timeout in case Render transiently fails to connect.
+        db_url = settings.SQLALCHEMY_DATABASE_URI or ""
+        if "connect_timeout=" not in db_url:
+            joiner = "&" if "?" in db_url else "?"
+            db_url = f"{db_url}{joiner}connect_timeout=5"
+
+        from sqlalchemy import create_engine as _create_engine, text as _text
+
+        engine = _create_engine(db_url, isolation_level="AUTOCOMMIT")
+        stmts = [
+            'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS label_prefix VARCHAR NOT NULL DEFAULT \'MailOS\'',
+            'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS apply_prefix_to_existing BOOLEAN NOT NULL DEFAULT false',
+            'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS auto_create_events BOOLEAN NOT NULL DEFAULT false',
+            'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS auto_fetch_enabled BOOLEAN NOT NULL DEFAULT true',
+            'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS digest_enabled BOOLEAN NOT NULL DEFAULT true',
+            'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS digest_frequency VARCHAR NOT NULL DEFAULT \'daily\'',
+            'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS digest_time_local VARCHAR DEFAULT \'09:00\'',
+        ]
+
+        with engine.connect() as conn:
+            for stmt in stmts:
+                conn.execute(_text(stmt))
+
+        logger.info("Schema safety net completed: critical `user` columns ensured.")
+    except Exception as e:
+        # Never block startup due to schema safety net issues.
+        logger.error(f"Schema safety net failed: {e}", exc_info=True)

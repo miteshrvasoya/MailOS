@@ -11,6 +11,9 @@ import api, { EmailInsight } from '@/lib/api'
 import { trackEvent, AnalyticsCategories } from '@/lib/analytics'
 import { useToast } from '@/components/ui/use-toast'
 
+const DEBUG_ENDPOINT = 'http://127.0.0.1:7489/ingest/e464efb9-3f59-4123-a70c-2cb6541aad5c'
+const DEBUG_SESSION_ID = '22f7dc'
+
 export default function DashboardPage() {
   const { user, userId } = useAuth()
   const router = useRouter()
@@ -39,6 +42,24 @@ export default function DashboardPage() {
 
   useEffect(() => {
     console.log("[Dashboard] useEffect[userId] evaluating. userId:", userId);
+    // #region debug log H1_dashboard_userId_gate
+    fetch(DEBUG_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Debug-Session-Id': DEBUG_SESSION_ID,
+      },
+      body: JSON.stringify({
+        sessionId: DEBUG_SESSION_ID,
+        runId: 'debug_initial',
+        hypothesisId: 'H1_missing_user_id_in_nextauth_session',
+        location: 'frontend/app/dashboard/page.tsx:useEffect[userId]',
+        message: 'Dashboard userId gate tick',
+        data: { userIdPresent: !!userId, hasUser: !!user },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {})
+    // #endregion
     if (userId) {
       console.log("[Dashboard] userId exists, calling fetchDashboardData and checkSyncStatus");
       fetchDashboardData()
