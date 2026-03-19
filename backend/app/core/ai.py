@@ -1,8 +1,9 @@
 """
-AI Classification Module — OpenRouter REST API
+AI Classification Module — OpenRouter REST API (v2 — Hybrid Pipeline)
 
 Uses direct HTTP calls (httpx) instead of OpenAI SDK.
 Logs every request/response to AILog table for debugging and analysis.
+Integrates classification_normalizer for consistency.
 """
 
 import re
@@ -11,7 +12,7 @@ import time
 import httpx
 import uuid
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -44,12 +45,140 @@ def preprocess_email(subject: str, body: str, sender: str) -> Dict[str, str]:
     }
 
 
+# ─── Upgraded Prompts ────────────────────────────────────────────
+
+SYSTEM_MESSAGE = """You are a highly accurate email classification engine.
+
+Your job is to classify emails with high consistency, not creativity.
+
+Always return valid JSON.
+Do NOT generate random or inconsistent labels.
+"""
+
+def _build_single_prompt(clean_data: Dict[str, str]) -> str:
+    return f"""Analyze this email and return structured JSON.
+
+STRICT RULES:
+
+1. CATEGORY:
+Choose ONE from:
+["Work", "Finance", "Social", "Promotions", "Travel", "Security", "System", "Other"]
+
+2. SUBCATEGORY:
+- Generate a SPECIFIC but CONSISTENT group name
+- MUST be plural
+- MUST be 2–4 words max
+- Avoid synonyms explosion
+- Similar emails MUST map to SAME subcategory
+Examples:
+✔ "LinkedIn Notifications"
+✔ "Bank Transactions"
+✔ "E-commerce Orders"
+✔ "Job Applications"
+✔ "OTP Messages"
+
+3. INTENT:
+- Must be machine-friendly snake_case
+- Highly specific
+- Examples: job_interview_invite, otp_verification, connection_request, payment_confirmation, subscription_renewal
+
+4. IMPORTANCE SCORE:
+0–100
+Rules:
+- OTP / security / deadlines → high (70-100)
+- Work / meetings → medium (40-70)
+- Newsletters / promos → low (0-30)
+
+5. TASK EXTRACTION:
+Extract only REAL actionable tasks. Do not fabricate tasks.
+
+6. CONSISTENCY RULE:
+If similar email types appear, ALWAYS reuse same subcategory and intent.
+
+EMAIL:
+Subject: {clean_data['subject']}
+Sender: {clean_data['sender']}
+Body: {clean_data['body']}
+
+Return JSON:
+{{
+  "category": "",
+  "subcategory": "",
+  "intent": "",
+  "importance_score": 0,
+  "needs_reply": false,
+  "urgency": "low|medium|high",
+  "explanation": "",
+  "tasks": []
+}}"""
+
+
+def _build_batch_prompt(
+    cleaned_emails: List[Dict[str, str]],
+    previous_classifications: Optional[List[Dict[str, Any]]] = None,
+) -> str:
+    """Build batch prompt with optional previous context for consistency."""
+    email_blocks = []
+    for i, c in enumerate(cleaned_emails):
+        email_blocks.append(
+            f"--- Email {i+1} ---\n"
+            f"Sender: {c['sender']}\n"
+            f"Subject: {c['subject']}\n"
+            f"Body: {c['body']}"
+        )
+    joined = "\n\n".join(email_blocks)
+
+    context_block = ""
+    if previous_classifications:
+        # Give the model context of recently classified emails for consistency
+        context_items = []
+        for pc in previous_classifications[-5:]:  # Last 5 for context
+            context_items.append(
+                f"  - subcategory: \"{pc.get('subcategory', '')}\", "
+                f"intent: \"{pc.get('intent', '')}\", "
+                f"category: \"{pc.get('category', '')}\""
+            )
+        context_block = f"""
+PREVIOUS CLASSIFICATIONS (for consistency — reuse subcategory and intent when the email type is similar):
+{chr(10).join(context_items)}
+"""
+
+    return f"""Classify these {len(cleaned_emails)} emails. Return a JSON array with exactly {len(cleaned_emails)} objects.
+
+STRICT RULES:
+
+1. CATEGORY: Choose ONE from ["Work", "Finance", "Social", "Promotions", "Travel", "Security", "System", "Other"]
+
+2. SUBCATEGORY:
+- SPECIFIC but CONSISTENT pluralized group name (2-4 words)
+- Similar emails MUST map to SAME subcategory
+- Examples: "LinkedIn Notifications", "Bank Transactions", "E-commerce Orders", "OTP Messages"
+
+3. INTENT: machine-friendly snake_case (e.g. otp_verification, connection_request, payment_confirmation)
+
+4. IMPORTANCE SCORE: 0-100 (OTP/security/deadlines=high, newsletters/promos=low)
+
+5. TASKS: Extract only REAL actionable tasks. Do not fabricate.
+{context_block}
+Schema per object:
+{{
+  "category": "", "subcategory": "", "intent": "",
+  "importance_score": 0, "needs_reply": false,
+  "urgency": "low|medium|high", "explanation": "",
+  "tasks": [{{"title": "", "priority": "medium", "due_date": "YYYY-MM-DD or null"}}]
+}}
+
+Emails:
+{joined}"""
+
+
 # ─── OpenRouter REST Client ──────────────────────────────────────
 
 def _call_openrouter(
     messages: list,
     model: Optional[str] = None,
-    temperature: float = 0,
+    temperature: float = 0.2,
+    top_p: float = 0.9,
     response_format: Optional[dict] = None,
 ) -> Dict[str, Any]:
     """
@@ -76,6 +205,7 @@ def _call_openrouter(
         "model": model,
         "messages": messages,
         "temperature": temperature,
+        "top_p": top_p,
     }
 
     if response_format:
@@ -96,7 +226,7 @@ def _call_openrouter(
     return data
 
 
-# ─── AI Classification with Logging ──────────────────────────────
+# ─── AI Classification with Normalization ────────────────────────
 
 def classify_email(
     subject: str,
@@ -108,44 +238,34 @@ def classify_email(
 ) -> Dict[str, Any]:
     """
     Classify email intent and importance using OpenRouter REST API.
-    Logs the request and response to AILog if db session is provided.
+    Applies post-LLM normalization for consistency.
+    Logs raw + normalized output to AILog.
     """
-    print("Email Classification (REST API) ---")
+    from app.services.classification_normalizer import try_fast_path, normalize_result
 
     clean_data = preprocess_email(subject, body, sender)
 
-    system_message = "You are an AI Email Assistant. Respond ONLY in valid JSON."
-    user_message = f"""Analyze this email and return a JSON object. We want a deep, dynamic classification.
+    # ── Fast Path (skip LLM) ──
+    fast_result = try_fast_path(clean_data["subject"], clean_data["sender"], clean_data["body"])
+    if fast_result:
+        logger.info(f"AI: Fast path hit for '{subject[:50]}' — skipping LLM")
+        # Log fast path result
+        if db:
+            _save_log(
+                db=db, user_id=user_id, email_id=email_id,
+                model="fast_path", messages=[], temperature=0,
+                response_content=json.dumps(fast_result), parsed_result=fast_result,
+                finish_reason="fast_path", prompt_tokens=0, completion_tokens=0,
+                total_tokens=0, cost=0, latency_ms=0,
+                status="success", purpose="classify_email_fast_path",
+            )
+        return fast_result
 
-Instead of generic buckets, generate a highly specific `subcategory` that describes the exact nature of the email.
-Examples of dynamic subcategories: "Job Interviews", "E-commerce Orders", "Bank Transactions", "Software Subscriptions", "Team Updates", "Travel Bookings", "Food Delivery", "Account Security".
-
-Output JSON Schema:
-{{
-  "category": "Broad bucket (Work, Personal, Finance, Promo, Travel)",
-  "subcategory": "Create a highly specific, pluralized dynamic group name (e.g. 'Bank Transactions', 'Recruiting Updates', 'Software Alerts')",
-  "intent": "Fine-grained intent (e.g. connection_request, invoice, job_offer)",
-  "importance_score": 0-100 (float),
-  "needs_reply": boolean,
-  "urgency": "low" | "medium" | "high",
-  "explanation": "Short reason why",
-  "tasks": [
-    {{
-        "title": "Actionable task title",
-        "priority": "high/medium/low",
-        "due_date": "YYYY-MM-DD or null",
-        "status": "pending"
-    }}
-  ]
-}}
-
-Email:
-Sender: {clean_data['sender']}
-Subject: {clean_data['subject']}
-Body: {clean_data['body']}"""
+    # ── LLM Classification ──
+    user_message = _build_single_prompt(clean_data)
 
     messages = [
-        {"role": "system", "content": system_message},
+        {"role": "system", "content": SYSTEM_MESSAGE},
         {"role": "user", "content": user_message},
     ]
 
@@ -155,7 +275,8 @@ Body: {clean_data['body']}"""
         response_data = _call_openrouter(
             messages=messages,
             model=model,
-            temperature=0,
+            temperature=0.2,
+            top_p=0.9,
             response_format={"type": "json_object"},
         )
 
@@ -166,72 +287,62 @@ Body: {clean_data['body']}"""
         usage = response_data.get("usage", {})
         latency_ms = response_data.get("_latency_ms", 0)
 
-        # Parse the AI response
-        parsed = json.loads(content)
+        # Parse raw AI response
+        raw_parsed = json.loads(content)
 
-        print(f"AI Response (model={response_data.get('model', model)}, "
-              f"tokens={usage.get('total_tokens', 0)}, "
-              f"latency={latency_ms}ms): {parsed.get('category')} / {parsed.get('intent')}")
+        # Normalize
+        normalized = normalize_result(raw_parsed)
 
-        # Log to database
+        logger.info(f"AI: Classified '{subject[:40]}' → {normalized.get('category')}/{normalized.get('subcategory')} "
+                     f"(model={response_data.get('model', model)}, tokens={usage.get('total_tokens', 0)}, latency={latency_ms}ms)")
+
+        # Log to database (store both raw + normalized)
         if db:
             _save_log(
-                db=db,
-                user_id=user_id,
-                email_id=email_id,
-                model=response_data.get("model", model),
-                messages=messages,
-                temperature=0,
-                response_content=content,
-                parsed_result=parsed,
+                db=db, user_id=user_id, email_id=email_id,
+                model=response_data.get("model", model), messages=messages,
+                temperature=0.2, response_content=content,
+                parsed_result={"raw": raw_parsed, "normalized": normalized},
                 finish_reason=finish_reason,
                 prompt_tokens=usage.get("prompt_tokens", 0),
                 completion_tokens=usage.get("completion_tokens", 0),
                 total_tokens=usage.get("total_tokens", 0),
-                cost=usage.get("cost", 0),
-                latency_ms=latency_ms,
-                status="success",
-                purpose="classify_email",
+                cost=usage.get("cost", 0), latency_ms=latency_ms,
+                status="success", purpose="classify_email",
             )
 
-        return parsed
+        return normalized
 
     except Exception as e:
-        print(f"AI Classification failed: {e}")
+        logger.error(f"AI Classification failed: {e}")
 
         # Log error
         if db:
             _save_log(
-                db=db,
-                user_id=user_id,
-                email_id=email_id,
-                model=model,
-                messages=messages,
-                temperature=0,
-                response_content=None,
-                parsed_result=None,
-                finish_reason=None,
-                prompt_tokens=0,
-                completion_tokens=0,
-                total_tokens=0,
-                cost=0,
-                latency_ms=0,
-                status="error",
-                purpose="classify_email",
-                error=str(e),
+                db=db, user_id=user_id, email_id=email_id,
+                model=model, messages=messages, temperature=0.2,
+                response_content=None, parsed_result=None, finish_reason=None,
+                prompt_tokens=0, completion_tokens=0, total_tokens=0,
+                cost=0, latency_ms=0,
+                status="error", purpose="classify_email", error=str(e),
             )
 
         return {
-            "category": "Uncategorized",
+            "category": "Other",
+            "subcategory": "Uncategorized",
             "intent": "error",
             "importance_score": 0.0,
             "needs_reply": False,
             "urgency": "low",
-            "explanation": f"AI Processing Error: {str(e)}"
+            "explanation": f"AI Processing Error: {str(e)}",
+            "tasks": [],
         }
 
 
-# ─── Batch AI Classification ────────────────────────────────────
+# ─── Batch AI Classification with Context ───────────────────────
+
+# Module-level context for batch consistency
+_batch_context: List[Dict[str, Any]] = []
 
 def classify_emails_batch(
     emails: list[Dict[str, str]],
@@ -240,10 +351,13 @@ def classify_emails_batch(
 ) -> list[Dict[str, Any]]:
     """
     Classify multiple emails in a single API call.
-    Each email in the list should have: subject, body, sender.
-    Returns a list of classification dicts in the same order.
+    Uses previous batch context for consistency.
+    Applies post-LLM normalization to every result.
     Falls back to individual classification on failure.
     """
+    global _batch_context
+    from app.services.classification_normalizer import try_fast_path, normalize_result
+
     if not emails:
         return []
 
@@ -254,44 +368,37 @@ def classify_emails_batch(
 
     logger.info(f"AI: Batch classification (REST API) — {len(emails)} emails")
 
-    # Preprocess all emails
-    cleaned = [preprocess_email(e.get("subject", ""), e.get("body", ""), e.get("sender", "")) for e in emails]
+    # ── Separate fast-path from LLM-needed ──
+    results: list[Optional[Dict[str, Any]]] = [None] * len(emails)
+    llm_indices: list[int] = []
+    llm_emails: list[Dict[str, str]] = []
 
-    # Build the batch prompt
-    email_blocks = []
-    for i, c in enumerate(cleaned):
-        email_blocks.append(
-            f"--- Email {i+1} ---\n"
-            f"Sender: {c['sender']}\n"
-            f"Subject: {c['subject']}\n"
-            f"Body: {c['body']}"
-        )
+    for i, e in enumerate(emails):
+        clean = preprocess_email(e.get("subject", ""), e.get("body", ""), e.get("sender", ""))
+        fast = try_fast_path(clean["subject"], clean["sender"], clean["body"])
+        if fast:
+            results[i] = fast
+            _batch_context.append(fast)  # Add to context
+        else:
+            llm_indices.append(i)
+            llm_emails.append(clean)
 
-    joined = "\n\n".join(email_blocks)
+    fast_count = len(emails) - len(llm_indices)
+    if fast_count:
+        logger.info(f"AI: Fast path resolved {fast_count}/{len(emails)} emails")
 
-    system_message = "You are an AI Email Classification assistant. Respond ONLY with a valid JSON array."
-    user_message = f"""Classify these {len(emails)} emails. We require deep, dynamic classification.
+    if not llm_emails:
+        # All resolved by fast path
+        return [r for r in results if r is not None]
 
-Generate a highly specific, pluralized `subcategory` for each email that describes the precise nature of the message rather than a generic bucket.
-Examples: "Flight Confirmations", "Bank Transactions", "Newsletter Subscriptions", "Meeting Requests", "E-commerce Receipts", "Job Applications".
-
-Return a JSON array with exactly {len(emails)} objects. Schema:
-{{
-  "category": "Work" | "Personal" | "Finance" | "Promo" | "Travel",
-  "subcategory": "Highly specific, dynamic pluralized group name (e.g. 'Software Subscriptions', 'Job Interviews')",
-  "intent": "e.g. connection_request, market_news, otp, invoice, meeting_request",
-  "importance_score": 0-100,
-  "needs_reply": boolean,
-  "urgency": "low" | "medium" | "high",
-  "explanation": "Short reason",
-  "tasks": [{{ "title": "string", "priority": "medium", "due_date": "YYYY-MM-DD" }}]
-}}
-
-Emails:
-{joined}"""
+    # ── Build batch prompt with context ──
+    user_message = _build_batch_prompt(
+        llm_emails,
+        previous_classifications=_batch_context[-5:] if _batch_context else None,
+    )
 
     messages = [
-        {"role": "system", "content": system_message},
+        {"role": "system", "content": SYSTEM_MESSAGE},
         {"role": "user", "content": user_message},
     ]
 
@@ -301,7 +408,8 @@ Emails:
         response_data = _call_openrouter(
             messages=messages,
             model=model,
-            temperature=0,
+            temperature=0.2,
+            top_p=0.9,
             response_format={"type": "json_object"},
         )
 
@@ -314,64 +422,60 @@ Emails:
         # Parse — handle both raw array and wrapped object
         parsed = json.loads(content)
 
-        logger.debug(f"AI: Batch parsed response: {len(parsed) if isinstance(parsed, list) else 'non-list'} items")
-
-
         if isinstance(parsed, dict):
-            # Some models wrap in {"classifications": [...]} or {"results": [...]}
             for key in ("classifications", "results", "emails", "data"):
                 if key in parsed and isinstance(parsed[key], list):
                     parsed = parsed[key]
                     break
             else:
-                # If it's a single object, wrap it
                 if "category" in parsed:
                     parsed = [parsed]
 
-        if not isinstance(parsed, list) or len(parsed) != len(emails):
-            logger.warning(f"AI: Batch parse mismatch — expected {len(emails)}, got {len(parsed) if isinstance(parsed, list) else 'non-list'}. Falling back.")
+        if not isinstance(parsed, list) or len(parsed) != len(llm_emails):
+            logger.warning(f"AI: Batch parse mismatch — expected {len(llm_emails)}, got {len(parsed) if isinstance(parsed, list) else 'non-list'}. Falling back.")
             raise ValueError("Batch response count mismatch")
 
+        # Normalize each result
+        raw_results = list(parsed)
+        normalized_results = [normalize_result(r if isinstance(r, dict) else {}) for r in parsed]
+
         logger.info(f"AI: Batch classified (model={response_data.get('model', model)}, "
-                     f"tokens={usage.get('total_tokens', 0)}, "
-                     f"latency={latency_ms}ms): {len(parsed)} classifications")
+                     f"tokens={usage.get('total_tokens', 0)}, latency={latency_ms}ms): "
+                     f"{len(normalized_results)} LLM + {fast_count} fast-path")
 
         # Log to database
         if db:
             _save_log(
-                db=db,
-                user_id=user_id,
-                email_id=None,
-                model=response_data.get("model", model),
-                messages=messages,
-                temperature=0,
-                response_content=content,
-                parsed_result={"batch_size": len(parsed), "results": parsed},
+                db=db, user_id=user_id, email_id=None,
+                model=response_data.get("model", model), messages=messages,
+                temperature=0.2, response_content=content,
+                parsed_result={"batch_size": len(parsed), "raw": raw_results, "normalized": normalized_results},
                 finish_reason=finish_reason,
                 prompt_tokens=usage.get("prompt_tokens", 0),
                 completion_tokens=usage.get("completion_tokens", 0),
                 total_tokens=usage.get("total_tokens", 0),
-                cost=usage.get("cost", 0),
-                latency_ms=latency_ms,
-                status="success",
-                purpose="classify_email_batch",
+                cost=usage.get("cost", 0), latency_ms=latency_ms,
+                status="success", purpose="classify_email_batch",
             )
 
-        # Ensure each result has all required fields
-        defaults = {
-            "category": "Uncategorized",
-            "intent": "unknown",
-            "importance_score": 0.0,
-            "needs_reply": False,
-            "urgency": "low",
-            "explanation": "",
-        }
-        sanitized = []
-        for r in parsed:
-            item = {**defaults, **(r if isinstance(r, dict) else {})}
-            sanitized.append(item)
+        # Map normalized results back to original indices
+        for j, norm in enumerate(normalized_results):
+            original_idx = llm_indices[j]
+            results[original_idx] = norm
+            _batch_context.append(norm)  # Add to running context
 
-        return sanitized
+        # Keep context bounded
+        if len(_batch_context) > 20:
+            _batch_context = _batch_context[-20:]
+
+        # Fill any remaining None with defaults
+        defaults = {
+            "category": "Other", "subcategory": "Uncategorized",
+            "intent": "unknown", "importance_score": 0.0,
+            "needs_reply": False, "urgency": "low", "explanation": "", "tasks": [],
+        }
+        final = [r if r is not None else defaults for r in results]
+        return final
 
     except Exception as e:
         logger.error(f"AI: Batch classification failed: {e}. Falling back to individual classification.")
@@ -379,34 +483,29 @@ Emails:
         # Log error
         if db:
             _save_log(
-                db=db,
-                user_id=user_id,
-                email_id=None,
-                model=model,
-                messages=messages,
-                temperature=0,
-                response_content=None,
-                parsed_result=None,
-                finish_reason=None,
-                prompt_tokens=0,
-                completion_tokens=0,
-                total_tokens=0,
-                cost=0,
-                latency_ms=0,
-                status="error",
-                purpose="classify_email_batch",
-                error=str(e),
+                db=db, user_id=user_id, email_id=None,
+                model=model, messages=messages, temperature=0.2,
+                response_content=None, parsed_result=None, finish_reason=None,
+                prompt_tokens=0, completion_tokens=0, total_tokens=0,
+                cost=0, latency_ms=0,
+                status="error", purpose="classify_email_batch", error=str(e),
             )
 
-        # Fallback: classify individually
-        results = []
-        for em in emails:
+        # Fallback: classify individually (already includes normalization)
+        for j, idx in enumerate(llm_indices):
+            e_data = emails[idx]
             result = classify_email(
-                em.get("subject", ""), em.get("body", ""), em.get("sender", ""),
+                e_data.get("subject", ""), e_data.get("body", ""), e_data.get("sender", ""),
                 db=db, user_id=user_id,
             )
-            results.append(result)
-        return results
+            results[idx] = result
+
+        defaults = {
+            "category": "Other", "subcategory": "Uncategorized",
+            "intent": "unknown", "importance_score": 0.0,
+            "needs_reply": False, "urgency": "low", "explanation": "", "tasks": [],
+        }
+        return [r if r is not None else defaults for r in results]
 
 
 # ─── Digest Insight Generation ──────────────────────────────────
@@ -428,7 +527,7 @@ def generate_digest_insights(
     email_contexts = []
     for section in sections:
         cat = section.get('category', 'Other')
-        for h in section.get('highlights', [])[:3]: # Only send the top 3 per category to keep token count low
+        for h in section.get('highlights', [])[:3]:
             email_contexts.append(
                 f"[{cat}] {h.get('sender', 'Unknown')} - {h.get('subject', 'No Subject')} "
                 f"(Reply needed: {h.get('needs_reply', False)}, Urgency: {h.get('urgency', 'low')})"
@@ -451,11 +550,10 @@ def generate_digest_insights(
     model = settings.AI_MODEL
 
     try:
-        # We don't force JSON here, just a string response
         response_data = _call_openrouter(
             messages=messages,
             model=model,
-            temperature=0.7, # Slightly higher temp for natural language
+            temperature=0.7,
         )
 
         choice = response_data["choices"][0]

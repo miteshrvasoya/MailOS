@@ -4,38 +4,61 @@ from app.models.rule import Rule
 from app.models.email import EmailInsight
 from app.models.preference import UserIntentPreference
 import uuid
+import logging
 
-# Default Intent -> Group Map
+logger = logging.getLogger(__name__)
+
+# ─── Canonical Intent → Group Map ────────────────────────────────
+# Uses the canonical intents from classification_normalizer.py
+
 INTENT_GROUP_MAP = {
-    "interview_invitation": "Job Applications",
+    # Jobs
+    "job_interview_invite": "Job Applications",
     "job_application_update": "Job Applications",
-    "application_status": "Job Applications",
-    "payment_received": "Finance",
-    "invoice": "Finance",
-    "bill_due": "Finance", 
-    "bank_alert": "Finance",
-    "otp_message": "Security",
-    "login_alert": "Security",
+    "job_offer": "Job Applications",
+    # Finance
+    "payment_confirmation": "Finance",
+    "invoice_notification": "Finance",
+    "subscription_renewal": "Finance",
+    # Security
+    "otp_verification": "Security",
+    "security_alert": "Security",
     "password_reset": "Security",
-    "newsletter_issue": "Newsletters",
-    "newsletter_update": "Newsletters",
-    "shipping_update": "Orders",
+    # Newsletters
+    "newsletter_delivery": "Newsletters",
+    # Orders / Shipping
     "order_confirmation": "Orders",
-    "flight_confirmation": "Travel",
-    "hotel_booking": "Travel",
+    "shipping_notification": "Orders",
+    # Travel
+    "travel_booking_confirmation": "Travel",
+    # Social
+    "social_connection_request": "Social",
+    # Meetings
+    "meeting_invitation": "Work",
+    # Promotions
+    "promotional_offer": "Promotions",
+    # System
+    "system_notification": "System",
 }
 
-# Category -> Group Fallback
+# ─── Category → Group Fallback ───────────────────────────────────
+
 CATEGORY_GROUP_MAP = {
-    "Job": "Job Applications",
+    "Work": "Work",
     "Finance": "Finance",
     "Security": "Security",
+    "Social": "Social",
+    "Promotions": "Promotions",
+    "Travel": "Travel",
+    "System": "System",
+    "Other": "Inbox",
+    # Legacy aliases
+    "Job": "Job Applications",
     "Newsletter": "Newsletters",
     "Promo": "Promotions",
-    "Travel": "Travel",
-    "Work": "Work",
-    "Personal": "Personal",
+    "Personal": "Social",
 }
+
 
 def check_rule_match(email: EmailInsight, rule: Rule) -> bool:
     """
@@ -61,13 +84,14 @@ def check_rule_match(email: EmailInsight, rule: Rule) -> bool:
             
     return match
 
+
 def assign_group(email: EmailInsight, ai_result: Dict[str, Any], session: Session) -> str:
     """
     Decide which group to assign the email to based on priority:
     1. Rules
-    2. Thread (reuse) - TODO (requires storing thread-group mapping)
-    3. User Preference (Learned)
-    4. Intent Map
+    2. User Preference (Learned)
+    3. Normalized Subcategory (direct from AI + normalization)
+    4. Intent Map (canonical intents)
     5. Category Map (Fallback)
     6. Inbox
     """
@@ -77,7 +101,6 @@ def assign_group(email: EmailInsight, ai_result: Dict[str, Any], session: Sessio
     rules = session.exec(select(Rule).where(Rule.user_id == user_id, Rule.is_active == True)).all()
     for rule in rules:
         if check_rule_match(email, rule):
-            # Assuming action is like {"move_to_group": "Work"}
             actions = rule.actions or {}
             action_group = actions.get("move_to_group")
             if action_group:
@@ -85,7 +108,7 @@ def assign_group(email: EmailInsight, ai_result: Dict[str, Any], session: Sessio
 
     intent = ai_result.get("intent")
     
-    # 3. Check User Preference (Learned)
+    # 2. Check User Preference (Learned)
     if intent:
         pref = session.exec(select(UserIntentPreference).where(
             UserIntentPreference.user_id == user_id,
@@ -95,22 +118,19 @@ def assign_group(email: EmailInsight, ai_result: Dict[str, Any], session: Sessio
         if pref and pref.preferred_group_name:
             return pref.preferred_group_name
 
-    # 4. Deep Dynamic Subcategory Generation
-    # If the AI generated a highly specific dynamic subcategory, we use it directly.
-    # We clean it slightly just in case.
+    # 3. Normalized Subcategory (already normalized by the pipeline)
     subcategory = ai_result.get("subcategory")
     if subcategory and isinstance(subcategory, str) and len(subcategory.strip()) > 3:
-        # Strip some common wrapper quotes if AI sends them
-        clean_sub = subcategory.strip('\'" ')
-        # Capitalize words for nice UI presentation (e.g. 'flight confirmations' -> 'Flight Confirmations')
-        clean_sub = " ".join([word.capitalize() for word in clean_sub.split(" ")])
-        return clean_sub
+        # Already normalized by classification_normalizer — just use directly
+        clean_sub = subcategory.strip("'\" ")
+        if clean_sub and clean_sub != "Uncategorized" and clean_sub != "Other":
+            return clean_sub
 
-    # 5. Intent Map (Legacy Fallback)
+    # 4. Intent Map (canonical intents from normalizer)
     if intent and intent in INTENT_GROUP_MAP:
         return INTENT_GROUP_MAP[intent]
 
-    # 6. Category Fallback (Legacy Fallback)
+    # 5. Category Fallback
     category = ai_result.get("category")
     if category and category in CATEGORY_GROUP_MAP:
         return CATEGORY_GROUP_MAP[category]

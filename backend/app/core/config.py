@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     # OpenRouter / AI Settings
     OPENROUTER_API_KEY: Optional[str] = None
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
-    AI_MODEL: str = "arcee-ai/trinity-large-preview:free"
+    AI_MODEL: str = "nvidia/nemotron-3-super-120b-a12b:free"
     AI_BATCH_SIZE: int = 5  # Number of emails to classify per API call
     
     # Gmail Integration

@@ -35,14 +35,15 @@ class BatchStats:
         self.skipped = 0
         self.failed = 0
         self.classified = 0
+        self.fast_path = 0
         self.errors: List[str] = []
 
     @property
     def total_processed(self):
-        return self.stored + self.skipped + self.failed + self.classified
+        return self.stored + self.skipped + self.failed + self.classified + self.fast_path
 
     def summary(self) -> str:
-        return f"stored={self.stored}, skipped={self.skipped}, classified={self.classified}, failed={self.failed}"
+        return f"stored={self.stored}, skipped={self.skipped}, classified={self.classified}, fast_path={self.fast_path}, failed={self.failed}"
 
 
 def store_raw_emails(
@@ -217,7 +218,10 @@ def classify_stored_emails(
         try:
             _apply_classification_to_insight(db, user, insight, ai_result, gmail_service)
             insight.classification_status = "classified"
-            stats.classified += 1
+            if ai_result.get("_fast_path"):
+                stats.fast_path += 1
+            else:
+                stats.classified += 1
 
             # Auto-clean: evaluate newly classified email against rules
             if auto_clean_engine:

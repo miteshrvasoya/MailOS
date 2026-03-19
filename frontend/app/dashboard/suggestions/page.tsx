@@ -1,13 +1,14 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   Check, X, Sparkles, Brain, Loader2, AlertCircle,
-  CheckCheck, XCircle, Undo2, Timer
+  CheckCheck, XCircle, Undo2, Timer, ChevronDown, ChevronRight,
+  Tag, Pencil, FolderOpen, Hash
 } from 'lucide-react'
 import api from '@/lib/api'
 import { formatDistanceToNow } from 'date-fns'
@@ -35,7 +36,14 @@ interface UndoItem {
   seconds: number
 }
 
-const UNDO_WINDOW = 10 // seconds
+interface LabelGroup {
+  label: string
+  actions: Action[]
+  expanded: boolean
+}
+
+const UNDO_WINDOW = 10
+const EMAILS_PER_GROUP = 5 // Show first N, collapse rest
 
 export default function SuggestionsPage() {
   const [actions, setActions] = useState<Action[]>([])
@@ -44,17 +52,19 @@ export default function SuggestionsPage() {
   const [bulkProcessing, setBulkProcessing] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [undoItems, setUndoItems] = useState<UndoItem[]>([])
-  const [currentPage, setCurrentPage] = useState(1)
-  const ITEMS_PER_PAGE = 10
+  const [usedLabels, setUsedLabels] = useState<string[]>([])
+  const [editingGroupLabel, setEditingGroupLabel] = useState<string | null>(null)
+  const [newGroupLabel, setNewGroupLabel] = useState('')
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
+  const [reassigning, setReassigning] = useState(false)
   const undoIntervalsRef = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map())
   const { userId } = useAuth()
-
   const { toast } = useToast()
 
   useEffect(() => {
     fetchActions()
+    fetchUsedLabels()
     return () => {
-      // Cleanup undo timers
       undoIntervalsRef.current.forEach(interval => clearInterval(interval))
     }
   }, [userId])
@@ -64,7 +74,6 @@ export default function SuggestionsPage() {
       if (!userId) return
       const res = await api.get('/actions/pending-list', { params: { user_id: userId } })
       setActions(res.data)
-      setCurrentPage(1)
     } catch (error) {
       console.error('Failed to fetch actions:', error)
     } finally {
@@ -72,57 +81,80 @@ export default function SuggestionsPage() {
     }
   }
 
-  // ─── Undo Management ────────────────────────────────────────────
+  const fetchUsedLabels = async () => {
+    try {
+      if (!userId) return
+      const res = await api.get('/actions/used-labels', { params: { user_id: userId } })
+      setUsedLabels(res.data || [])
+    } catch (error) {
+      console.error('Failed to fetch used labels:', error)
+    }
+  }
+
+  // ─── Group actions by label ──────────────────────────────────────
+
+  const groups = useMemo<LabelGroup[]>(() => {
+    const map = new Map<string, Action[]>()
+    for (const action of actions) {
+      const label = action.suggested_label || 'Uncategorized'
+      if (!map.has(label)) map.set(label, [])
+      map.get(label)!.push(action)
+    }
+    // Sort: largest groups first
+    return Array.from(map.entries())
+      .sort((a, b) => b[1].length - a[1].length)
+      .map(([label, acts]) => ({
+        label,
+        actions: acts,
+        expanded: expandedGroups.has(label),
+      }))
+  }, [actions, expandedGroups])
+
+  const toggleGroupExpand = (label: string) => {
+    setExpandedGroups(prev => {
+      const n = new Set(prev)
+      if (n.has(label)) n.delete(label)
+      else n.add(label)
+      return n
+    })
+  }
+
+  // ─── Undo Management ──────────────────────────────────────────
 
   const addUndoItem = useCallback((actionId: string, type: 'approve' | 'reject', subject: string) => {
-    // Auto-dismiss after UNDO_WINDOW seconds
     const timeoutId = setTimeout(() => {
       setUndoItems(prev => prev.filter(u => u.actionId !== actionId))
       const interval = undoIntervalsRef.current.get(actionId)
-      if (interval) {
-        clearInterval(interval)
-        undoIntervalsRef.current.delete(actionId)
-      }
+      if (interval) { clearInterval(interval); undoIntervalsRef.current.delete(actionId) }
     }, UNDO_WINDOW * 1000)
 
-    // Countdown timer
     const interval = setInterval(() => {
       setUndoItems(prev =>
         prev.map(u => u.actionId === actionId ? { ...u, seconds: Math.max(0, u.seconds - 1) } : u)
       )
     }, 1000)
     undoIntervalsRef.current.set(actionId, interval)
-
     setUndoItems(prev => [...prev, { actionId, type, subject, timeoutId, seconds: UNDO_WINDOW }])
   }, [])
 
   const handleUndo = async (actionId: string) => {
     try {
       await api.post(`/actions/${actionId}/undo`)
-      // Remove from undo list
       setUndoItems(prev => {
         const item = prev.find(u => u.actionId === actionId)
         if (item) clearTimeout(item.timeoutId)
         return prev.filter(u => u.actionId !== actionId)
       })
       const interval = undoIntervalsRef.current.get(actionId)
-      if (interval) {
-        clearInterval(interval)
-        undoIntervalsRef.current.delete(actionId)
-      }
-      // Refetch to get the action back
+      if (interval) { clearInterval(interval); undoIntervalsRef.current.delete(actionId) }
       fetchActions()
       toast({ title: 'Action undone', description: 'The suggestion is back to pending.' })
     } catch (error: any) {
-      toast({
-        title: 'Undo failed',
-        description: error?.response?.data?.detail || 'Could not undo the action.',
-        variant: 'destructive',
-      })
+      toast({ title: 'Undo failed', description: error?.response?.data?.detail || 'Could not undo.', variant: 'destructive' })
     }
   }
 
-  // ─── Single Actions ─────────────────────────────────────────────
+  // ─── Single Actions ──────────────────────────────────────────
 
   const handleApprove = async (action: Action) => {
     setProcessing(action.id)
@@ -133,8 +165,7 @@ export default function SuggestionsPage() {
       setSelected(prev => { const n = new Set(prev); n.delete(action.id); return n })
       addUndoItem(action.id, 'approve', action.email_subject)
     } catch (error) {
-      console.error('Failed to approve:', error)
-      toast({ title: 'Approve failed', description: 'Could not approve the suggestion.', variant: 'destructive' })
+      toast({ title: 'Approve failed', variant: 'destructive' })
     } finally {
       setProcessing(null)
     }
@@ -149,14 +180,74 @@ export default function SuggestionsPage() {
       setSelected(prev => { const n = new Set(prev); n.delete(action.id); return n })
       addUndoItem(action.id, 'reject', action.email_subject)
     } catch (error) {
-      console.error('Failed to reject:', error)
-      toast({ title: 'Reject failed', description: 'Could not reject the suggestion.', variant: 'destructive' })
+      toast({ title: 'Reject failed', variant: 'destructive' })
     } finally {
       setProcessing(null)
     }
   }
 
-  // ─── Bulk Actions ───────────────────────────────────────────────
+  // ─── Group Actions ──────────────────────────────────────────
+
+  const handleApproveGroup = async (group: LabelGroup) => {
+    setBulkProcessing(true)
+    const ids = group.actions.map(a => a.id)
+    try {
+      trackEvent({ action: 'approve_group', category: 'Suggestions', label: `${group.label} (${ids.length})` })
+      await api.post('/actions/bulk-approve', { action_ids: ids })
+      setActions(prev => prev.filter(a => !ids.includes(a.id)))
+      setSelected(prev => { const n = new Set(prev); ids.forEach(id => n.delete(id)); return n })
+      toast({ title: `${ids.length} emails approved`, description: `Label "${group.label}" applied in Gmail.` })
+    } catch (error) {
+      toast({ title: 'Group approve failed', variant: 'destructive' })
+    } finally {
+      setBulkProcessing(false)
+    }
+  }
+
+  const handleRejectGroup = async (group: LabelGroup) => {
+    setBulkProcessing(true)
+    const ids = group.actions.map(a => a.id)
+    try {
+      trackEvent({ action: 'reject_group', category: 'Suggestions', label: `${group.label} (${ids.length})` })
+      await api.post('/actions/bulk-reject', { action_ids: ids })
+      setActions(prev => prev.filter(a => !ids.includes(a.id)))
+      setSelected(prev => { const n = new Set(prev); ids.forEach(id => n.delete(id)); return n })
+      toast({ title: `${ids.length} emails rejected`, description: 'Feedback recorded.' })
+    } catch (error) {
+      toast({ title: 'Group reject failed', variant: 'destructive' })
+    } finally {
+      setBulkProcessing(false)
+    }
+  }
+
+  const handleReassignGroupLabel = async (oldLabel: string, newLabel: string) => {
+    if (!newLabel.trim() || newLabel.trim() === oldLabel) {
+      setEditingGroupLabel(null)
+      return
+    }
+    setReassigning(true)
+    const groupActions = actions.filter(a => a.suggested_label === oldLabel)
+    const ids = groupActions.map(a => a.id)
+    try {
+      await api.post('/actions/bulk-update-label', {
+        action_ids: ids,
+        new_label: newLabel.trim(),
+      })
+      setActions(prev => prev.map(a =>
+        ids.includes(a.id) ? { ...a, suggested_label: newLabel.trim() } : a
+      ))
+      // Add new label to usedLabels if not already present
+      setUsedLabels(prev => prev.includes(newLabel.trim()) ? prev : [...prev, newLabel.trim()].sort())
+      toast({ title: 'Label updated', description: `${ids.length} emails moved to "${newLabel.trim()}"` })
+    } catch (error) {
+      toast({ title: 'Label update failed', variant: 'destructive' })
+    } finally {
+      setReassigning(false)
+      setEditingGroupLabel(null)
+    }
+  }
+
+  // ─── Bulk Actions (selected) ──────────────────────────────────
 
   const handleBulkApprove = async () => {
     if (selected.size === 0) return
@@ -165,14 +256,10 @@ export default function SuggestionsPage() {
     try {
       trackEvent({ action: 'bulk_approve', category: 'Suggestions', label: `${ids.length} items` })
       await api.post('/actions/bulk-approve', { action_ids: ids })
-      const approvedActions = actions.filter(a => ids.includes(a.id))
       setActions(prev => prev.filter(a => !ids.includes(a.id)))
       setSelected(new Set())
-      // Add undo items for the first few
-      approvedActions.slice(0, 3).forEach(a => addUndoItem(a.id, 'approve', a.email_subject))
-      toast({ title: `${ids.length} approved`, description: 'Labels are being applied in Gmail.' })
+      toast({ title: `${ids.length} approved`, description: 'Labels applied in Gmail.' })
     } catch (error) {
-      console.error('Bulk approve failed:', error)
       toast({ title: 'Bulk approve failed', variant: 'destructive' })
     } finally {
       setBulkProcessing(false)
@@ -188,38 +275,46 @@ export default function SuggestionsPage() {
       await api.post('/actions/bulk-reject', { action_ids: ids })
       setActions(prev => prev.filter(a => !ids.includes(a.id)))
       setSelected(new Set())
-      toast({ title: `${ids.length} rejected`, description: 'Feedback recorded for AI learning.' })
+      toast({ title: `${ids.length} rejected`, description: 'Feedback recorded.' })
     } catch (error) {
-      console.error('Bulk reject failed:', error)
       toast({ title: 'Bulk reject failed', variant: 'destructive' })
     } finally {
       setBulkProcessing(false)
     }
   }
 
-  // ─── Selection ──────────────────────────────────────────────────
+  // ─── Selection ─────────────────────────────────────────────────
 
   const toggleSelect = (id: string) => {
     setSelected(prev => {
       const n = new Set(prev)
-      if (n.has(id)) n.delete(id)
-      else n.add(id)
+      if (n.has(id)) n.delete(id); else n.add(id)
       return n
     })
   }
 
-  const toggleSelectAll = () => {
-    if (selected.size === actions.length) {
-      setSelected(new Set())
-    } else {
-      setSelected(new Set(actions.map(a => a.id)))
-    }
+  const toggleSelectGroup = (group: LabelGroup) => {
+    const ids = group.actions.map(a => a.id)
+    setSelected(prev => {
+      const n = new Set(prev)
+      const allIn = ids.every(id => n.has(id))
+      if (allIn) ids.forEach(id => n.delete(id))
+      else ids.forEach(id => n.add(id))
+      return n
+    })
   }
 
-  const allSelected = actions.length > 0 && selected.size === actions.length
+  const isGroupSelected = (group: LabelGroup) =>
+    group.actions.length > 0 && group.actions.every(a => selected.has(a.id))
 
-  const totalPages = Math.ceil(actions.length / ITEMS_PER_PAGE)
-  const paginatedActions = actions.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
+  const isGroupPartiallySelected = (group: LabelGroup) =>
+    group.actions.some(a => selected.has(a.id)) && !isGroupSelected(group)
+
+  // All available labels (AI + user's existing)
+  const allLabels = useMemo(() => {
+    const aiLabels = [...new Set(actions.map(a => a.suggested_label).filter(Boolean))]
+    return [...new Set([...usedLabels, ...aiLabels])].sort()
+  }, [usedLabels, actions])
 
   // ─── Render ─────────────────────────────────────────────────────
 
@@ -241,12 +336,18 @@ export default function SuggestionsPage() {
             AI Suggestions
           </h1>
           <p className="text-muted-foreground mt-1">
-            Review and approve AI organization proposals.
+            Review AI label proposals grouped by category. Approve, reassign, or reject in bulk.
           </p>
         </div>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground bg-secondary/50 px-3 py-1 rounded-full">
-          <Sparkles className="h-4 w-4" />
-          <span>{actions.length} pending</span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground bg-secondary/50 px-3 py-1.5 rounded-full">
+            <Sparkles className="h-4 w-4" />
+            <span>{actions.length} pending</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground bg-secondary/50 px-3 py-1.5 rounded-full">
+            <FolderOpen className="h-4 w-4" />
+            <span>{groups.length} groups</span>
+          </div>
         </div>
       </div>
 
@@ -254,34 +355,26 @@ export default function SuggestionsPage() {
       {selected.size > 0 && (
         <div className="sticky top-20 z-10 bg-card/95 backdrop-blur border border-border rounded-xl px-5 py-3 flex items-center justify-between shadow-lg animate-in slide-in-from-top-2 duration-300">
           <div className="flex items-center gap-3">
-            <Checkbox
-              checked={allSelected}
-              onCheckedChange={toggleSelectAll}
-              id="select-all-bar"
-            />
             <span className="text-sm font-medium">
               {selected.size} of {actions.length} selected
             </span>
           </div>
           <div className="flex items-center gap-2">
             <Button
-              variant="outline"
-              size="sm"
+              variant="outline" size="sm"
               className="gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-              onClick={handleBulkReject}
-              disabled={bulkProcessing}
+              onClick={handleBulkReject} disabled={bulkProcessing}
             >
               {bulkProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
-              Reject All
+              Reject Selected
             </Button>
             <Button
               size="sm"
               className="gap-1.5 bg-green-600 hover:bg-green-700 text-white"
-              onClick={handleBulkApprove}
-              disabled={bulkProcessing}
+              onClick={handleBulkApprove} disabled={bulkProcessing}
             >
               {bulkProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCheck className="h-4 w-4" />}
-              Approve All
+              Approve Selected
             </Button>
           </div>
         </div>
@@ -308,17 +401,10 @@ export default function SuggestionsPage() {
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <span className="text-xs text-muted-foreground flex items-center gap-1 tabular-nums">
-                  <Timer className="w-3 h-3" />
-                  {item.seconds}s
+                  <Timer className="w-3 h-3" /> {item.seconds}s
                 </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-7 px-2 gap-1 text-xs"
-                  onClick={() => handleUndo(item.actionId)}
-                >
-                  <Undo2 className="w-3 h-3" />
-                  Undo
+                <Button variant="outline" size="sm" className="h-7 px-2 gap-1 text-xs" onClick={() => handleUndo(item.actionId)}>
+                  <Undo2 className="w-3 h-3" /> Undo
                 </Button>
               </div>
             </div>
@@ -334,141 +420,193 @@ export default function SuggestionsPage() {
           </div>
           <h2 className="text-xl font-semibold">All caught up!</h2>
           <p className="text-muted-foreground max-w-sm mt-2">
-            AI has no pending suggestions for you. Why not check your <a href="/dashboard/settings" className="text-primary hover:underline">settings</a>?
+            AI has no pending suggestions. Check your <a href="/dashboard/settings" className="text-primary hover:underline">settings</a> to configure auto-apply.
           </p>
         </Card>
       ) : (
-        <div className="space-y-1">
-          {/* Select All Row */}
-          <div className="flex items-center gap-3 px-5 py-2">
-            <Checkbox
-              checked={allSelected}
-              onCheckedChange={toggleSelectAll}
-              id="select-all"
-            />
-            <label htmlFor="select-all" className="text-xs text-muted-foreground cursor-pointer">
-              Select all {actions.length} suggestions
-            </label>
-          </div>
+        <div className="space-y-4">
+          {groups.map((group) => {
+            const visibleActions = group.expanded
+              ? group.actions
+              : group.actions.slice(0, EMAILS_PER_GROUP)
+            const hasMore = group.actions.length > EMAILS_PER_GROUP
+            const avgConfidence = group.actions.reduce((sum, a) => sum + a.confidence, 0) / group.actions.length
 
-          <div className="grid gap-3">
-            {paginatedActions.map((action) => (
-              <Card
-                key={action.id}
-                className={`p-5 transition-all hover:shadow-md border-l-4 ${
-                  selected.has(action.id)
-                    ? 'border-l-primary bg-primary/[0.02] ring-1 ring-primary/20'
-                    : 'border-l-primary/50'
-                }`}
-              >
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="flex items-start gap-3 flex-1">
-                    <Checkbox
-                      checked={selected.has(action.id)}
-                      onCheckedChange={() => toggleSelect(action.id)}
-                      className="mt-1"
-                    />
-                    <div className="space-y-1 flex-1 min-w-0">
-                      <div className="flex items-start justify-between md:hidden">
-                        <span className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(new Date(action.created_at))} ago
-                        </span>
-                      </div>
+            return (
+              <Card key={group.label} className="overflow-hidden">
+                {/* Group Header */}
+                <div className="px-5 py-4 bg-secondary/30 border-b border-border/50">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <Checkbox
+                        checked={isGroupSelected(group)}
+                        // @ts-ignore
+                        indeterminate={isGroupPartiallySelected(group)}
+                        onCheckedChange={() => toggleSelectGroup(group)}
+                      />
 
-                      <h3 className="font-semibold text-lg line-clamp-1">{action.email_subject}</h3>
-                      <p className="text-sm text-muted-foreground">From: {action.email_sender}</p>
-
-                      <div className="flex flex-wrap items-center gap-2 mt-3">
-                        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 gap-1.5">
-                          <Sparkles className="h-3 w-3" />
-                          {action.suggested_label}
-                        </Badge>
-
-                        <Badge
-                          variant="outline"
-                          className={`gap-1 ${
-                            action.confidence > 0.9 ? 'text-green-600 bg-green-50 border-green-200' :
-                            action.confidence > 0.7 ? 'text-yellow-600 bg-yellow-50 border-yellow-200' :
-                            'text-gray-600 bg-gray-50 border-gray-200'
-                          }`}
-                        >
-                          <Brain className="h-3 w-3" />
-                          {Math.round(action.confidence * 100)}%
-                        </Badge>
-
-                        <span className="text-xs text-muted-foreground italic flex items-center gap-1">
-                          <AlertCircle className="h-3 w-3" />
-                          {action.reason}
-                        </span>
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        {editingGroupLabel === group.label ? (
+                          <div className="flex items-center gap-2 flex-1">
+                            <select
+                              value={newGroupLabel}
+                              onChange={(e) => setNewGroupLabel(e.target.value)}
+                              className="px-2 py-1 text-sm rounded-md bg-background border border-border focus:outline-none focus:border-primary min-w-[160px]"
+                            >
+                              <option value={group.label}>{group.label} (current)</option>
+                              {allLabels.filter(l => l !== group.label).map(l => (
+                                <option key={l} value={l}>{l}</option>
+                              ))}
+                            </select>
+                            <input
+                              type="text"
+                              placeholder="Or type custom label..."
+                              value={newGroupLabel && !allLabels.includes(newGroupLabel) ? newGroupLabel : ''}
+                              onChange={(e) => setNewGroupLabel(e.target.value)}
+                              className="px-2 py-1 text-sm rounded-md bg-background border border-border focus:outline-none focus:border-primary flex-1 min-w-[140px]"
+                            />
+                            <Button
+                              size="sm" variant="default" className="h-7 text-xs"
+                              disabled={reassigning}
+                              onClick={() => handleReassignGroupLabel(group.label, newGroupLabel)}
+                            >
+                              {reassigning ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Apply'}
+                            </Button>
+                            <Button
+                              size="sm" variant="ghost" className="h-7 text-xs"
+                              onClick={() => setEditingGroupLabel(null)}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        ) : (
+                          <>
+                            <Tag className="h-4 w-4 text-primary shrink-0" />
+                            <h3 className="font-semibold text-base truncate">{group.label}</h3>
+                            <Badge variant="outline" className="shrink-0 bg-primary/10 text-primary border-primary/20">
+                              <Hash className="h-3 w-3 mr-0.5" />
+                              {group.actions.length}
+                            </Badge>
+                            <Badge
+                              variant="outline"
+                              className={`shrink-0 gap-1 ${
+                                avgConfidence > 0.9 ? 'text-green-600 bg-green-50 border-green-200' :
+                                avgConfidence > 0.7 ? 'text-yellow-600 bg-yellow-50 border-yellow-200' :
+                                'text-gray-600 bg-gray-50 border-gray-200'
+                              }`}
+                            >
+                              <Brain className="h-3 w-3" />
+                              {Math.round(avgConfidence * 100)}% avg
+                            </Badge>
+                            <Button
+                              size="sm" variant="ghost"
+                              className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-primary"
+                              onClick={() => { setEditingGroupLabel(group.label); setNewGroupLabel(group.label) }}
+                            >
+                              <Pencil className="h-3 w-3" /> Change Label
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-2 md:border-l md:pl-6 flex-shrink-0">
-                    <span className="text-xs text-muted-foreground hidden md:block mr-2 whitespace-nowrap">
-                      {formatDistanceToNow(new Date(action.created_at))} ago
-                    </span>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
-                      onClick={() => handleReject(action)}
-                      disabled={!!processing || bulkProcessing}
-                    >
-                      {processing === action.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <X className="h-4 w-4" />
-                      )}
-                      Reject
-                    </Button>
-
-                    <Button
-                      size="sm"
-                      className="gap-1 bg-green-600 hover:bg-green-700 text-white"
-                      onClick={() => handleApprove(action)}
-                      disabled={!!processing || bulkProcessing}
-                    >
-                      {processing === action.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Check className="h-4 w-4" />
-                      )}
-                      Approve
-                    </Button>
+                    {/* Group Actions */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        variant="outline" size="sm"
+                        className="gap-1 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 text-xs"
+                        onClick={() => handleRejectGroup(group)}
+                        disabled={bulkProcessing}
+                      >
+                        <XCircle className="h-3.5 w-3.5" /> Reject All
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="gap-1 bg-green-600 hover:bg-green-700 text-white text-xs"
+                        onClick={() => handleApproveGroup(group)}
+                        disabled={bulkProcessing}
+                      >
+                        <CheckCheck className="h-3.5 w-3.5" /> Approve All
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </Card>
-            ))}
-          </div>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between pt-4 border-t border-border/50">
-              <p className="text-sm text-muted-foreground">
-                Page {currentPage} of {totalPages} &bull; {actions.length} total suggestions
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
-          )}
+                {/* Email List */}
+                <div className="divide-y divide-border/50">
+                  {visibleActions.map((action) => (
+                    <div
+                      key={action.id}
+                      className={`px-5 py-3 flex items-center gap-3 transition-colors hover:bg-secondary/20 ${
+                        selected.has(action.id) ? 'bg-primary/[0.02]' : ''
+                      }`}
+                    >
+                      <Checkbox
+                        checked={selected.has(action.id)}
+                        onCheckedChange={() => toggleSelect(action.id)}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{action.email_subject}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {action.email_sender}
+                          <span className="mx-1.5 opacity-40">•</span>
+                          {formatDistanceToNow(new Date(action.created_at))} ago
+                          {action.reason && (
+                            <>
+                              <span className="mx-1.5 opacity-40">•</span>
+                              <span className="italic">{action.reason}</span>
+                            </>
+                          )}
+                        </p>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={`shrink-0 gap-1 text-xs ${
+                          action.confidence > 0.9 ? 'text-green-600 bg-green-50 border-green-200' :
+                          action.confidence > 0.7 ? 'text-yellow-600 bg-yellow-50 border-yellow-200' :
+                          'text-gray-600 bg-gray-50 border-gray-200'
+                        }`}
+                      >
+                        {Math.round(action.confidence * 100)}%
+                      </Badge>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                          variant="ghost" size="sm"
+                          className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => handleReject(action)}
+                          disabled={!!processing || bulkProcessing}
+                        >
+                          {processing === action.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+                        </Button>
+                        <Button
+                          variant="ghost" size="sm"
+                          className="h-7 w-7 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                          onClick={() => handleApprove(action)}
+                          disabled={!!processing || bulkProcessing}
+                        >
+                          {processing === action.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Expand/Collapse */}
+                {hasMore && (
+                  <button
+                    onClick={() => toggleGroupExpand(group.label)}
+                    className="w-full px-5 py-2.5 text-xs text-muted-foreground hover:text-primary hover:bg-secondary/20 flex items-center justify-center gap-1.5 transition-colors border-t border-border/40"
+                  >
+                    {group.expanded ? (
+                      <><ChevronDown className="h-3.5 w-3.5" /> Show less</>
+                    ) : (
+                      <><ChevronRight className="h-3.5 w-3.5" /> Show {group.actions.length - EMAILS_PER_GROUP} more emails</>
+                    )}
+                  </button>
+                )}
+              </Card>
+            )
+          })}
         </div>
       )}
     </div>

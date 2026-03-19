@@ -307,3 +307,90 @@ def bulk_reject(
     db.commit()
     return BulkActionResult(succeeded=succeeded, failed=failed)
 
+
+# ─── Used Labels ──────────────────────────────────────────────────
+
+@router.get("/used-labels", response_model=List[str])
+def get_used_labels(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    """Return all unique labels this user has ever used (approved or suggested)."""
+    from sqlalchemy import distinct, func
+    results = db.exec(
+        select(distinct(EmailAction.suggested_label))
+        .where(EmailAction.user_id == current_user.id)
+        .where(EmailAction.suggested_label.isnot(None))
+    ).all()
+    return sorted(set(r for r in results if r))
+
+
+# ─── Update Suggested Label ──────────────────────────────────────
+
+class UpdateLabelRequest(BaseModel):
+    new_label: str
+
+@router.put("/{action_id}/update-label", response_model=ActionResponse)
+def update_action_label(
+    action_id: uuid.UUID,
+    req: UpdateLabelRequest,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    """Change the suggested label on a pending action before approval."""
+    action = db.get(EmailAction, action_id)
+    if not action:
+        raise HTTPException(status_code=404, detail="Action not found")
+    if action.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    if action.status != "pending":
+        raise HTTPException(status_code=400, detail="Can only update pending actions")
+
+    action.suggested_label = req.new_label.strip()
+    action.updated_at = datetime.utcnow()
+    db.add(action)
+    db.commit()
+    db.refresh(action)
+
+    return ActionResponse(
+        id=action.id,
+        email_id=action.email_id,
+        email_subject=action.email.subject if action.email else "Unknown",
+        email_sender=action.email.sender if action.email else "Unknown",
+        suggested_label=action.suggested_label,
+        confidence=action.confidence,
+        reason=action.reason or "",
+        created_at=action.created_at,
+        status=action.status,
+    )
+
+
+# ─── Bulk Update Label ────────────────────────────────────────────
+
+class BulkUpdateLabelRequest(BaseModel):
+    action_ids: List[uuid.UUID]
+    new_label: str
+
+@router.post("/bulk-update-label", response_model=BulkActionResult)
+def bulk_update_label(
+    req: BulkUpdateLabelRequest,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    """Change the suggested label for multiple pending actions at once."""
+    succeeded = []
+    failed = []
+    new_label = req.new_label.strip()
+
+    for action_id in req.action_ids:
+        action = db.get(EmailAction, action_id)
+        if not action or action.user_id != current_user.id or action.status != "pending":
+            failed.append(str(action_id))
+            continue
+        action.suggested_label = new_label
+        action.updated_at = datetime.utcnow()
+        db.add(action)
+        succeeded.append(str(action_id))
+
+    db.commit()
+    return BulkActionResult(succeeded=succeeded, failed=failed)
