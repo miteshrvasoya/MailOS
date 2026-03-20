@@ -17,6 +17,7 @@ class UserSettingsUpdate(BaseModel):
     auto_create_events: bool | None = None
     label_prefix: str | None = None
     apply_prefix_to_existing: bool | None = None
+    enable_label_colors: bool | None = None
 
 class UserSettingsResponse(BaseModel):
     auto_fetch_enabled: bool
@@ -25,6 +26,7 @@ class UserSettingsResponse(BaseModel):
     auto_create_events: bool
     label_prefix: str
     apply_prefix_to_existing: bool
+    enable_label_colors: bool
 
 def _build_response(user: User) -> UserSettingsResponse:
     return UserSettingsResponse(
@@ -34,6 +36,7 @@ def _build_response(user: User) -> UserSettingsResponse:
         auto_create_events=user.auto_create_events,
         label_prefix=user.label_prefix,
         apply_prefix_to_existing=user.apply_prefix_to_existing,
+        enable_label_colors=user.enable_label_colors,
     )
 
 @router.get("/", response_model=UserSettingsResponse)
@@ -70,6 +73,8 @@ def update_user_settings(
         user.auto_create_events = settings_in.auto_create_events
     if settings_in.apply_prefix_to_existing is not None:
         user.apply_prefix_to_existing = settings_in.apply_prefix_to_existing
+    if settings_in.enable_label_colors is not None:
+        user.enable_label_colors = settings_in.enable_label_colors
     if settings_in.label_prefix is not None:
         user.label_prefix = settings_in.label_prefix
 

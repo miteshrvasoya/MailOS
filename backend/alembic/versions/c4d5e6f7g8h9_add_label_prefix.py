@@ -24,6 +24,10 @@ def upgrade() -> None:
         op.add_column('user', sa.Column('apply_prefix_to_existing', sa.Boolean(), server_default='false', nullable=False))
     except Exception:
         pass
+    try:
+        op.add_column('user', sa.Column('enable_label_colors', sa.Boolean(), server_default='true', nullable=False))
+    except Exception:
+        pass
 
 
 def downgrade() -> None:

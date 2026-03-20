@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
-import { Mail, Clock, Lock, Trash2, LogOut, AlertTriangle } from 'lucide-react'
+import { Mail, Clock, Lock, Trash2, LogOut, AlertTriangle, Palette } from 'lucide-react'
 import { signIn } from 'next-auth/react'
 import { useAuth } from '@/hooks/useAuth'
 import api from '@/lib/api'
@@ -34,6 +34,7 @@ export default function SettingsPage() {
   const [savingPrefix, setSavingPrefix] = useState(false)
   const [applyToExisting, setApplyToExisting] = useState(false)
   const [prefixSaveSuccess, setPrefixSaveSuccess] = useState(false)
+  const [enableLabelColors, setEnableLabelColors] = useState(true)
 
   // Fetch Gmail Status
   useEffect(() => {
@@ -57,6 +58,9 @@ export default function SettingsPage() {
               setSavedPrefix(res.data.label_prefix)
             }
             setApplyToExisting(res.data.apply_prefix_to_existing || false)
+            if (res.data.enable_label_colors !== undefined) {
+              setEnableLabelColors(res.data.enable_label_colors)
+            }
           }
         })
         .catch((err: any) => console.error('Failed to load user settings', err))
@@ -314,6 +318,31 @@ export default function SettingsPage() {
               <Switch
                 checked={applyToExisting}
                 onCheckedChange={handleToggleApplyToExisting}
+              />
+            </div>
+
+            {/* Label Colors toggle */}
+            <div className="flex items-center justify-between bg-accent/20 p-4 rounded-lg border border-border/50">
+              <div className="space-y-0.5 max-w-[80%]">
+                <h4 className="text-sm font-medium flex items-center gap-1.5">
+                  <Palette className="h-3.5 w-3.5 text-primary" />
+                  Colorful Labels
+                </h4>
+                <p className="text-xs text-muted-foreground">
+                  Automatically assign visually distinct colors to new Gmail labels for easier scanning. Existing labels are not affected.
+                </p>
+              </div>
+              <Switch
+                checked={enableLabelColors}
+                onCheckedChange={async (checked) => {
+                  setEnableLabelColors(checked)
+                  if (!userId) return
+                  try {
+                    await api.put('/settings', { enable_label_colors: checked }, { params: { user_id: userId } })
+                  } catch (err) {
+                    console.error('Failed to update enable_label_colors', err)
+                  }
+                }}
               />
             </div>
           </div>

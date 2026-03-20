@@ -208,19 +208,17 @@ class GmailService:
     def ensure_label(self, name: str) -> str:
         """
         Check if a label exists in Gmail. If not, create it.
+        Optionally assigns a random color if user.enable_label_colors is True.
         Return the gmail_label_id.
         Requires 'https://www.googleapis.com/auth/gmail.modify' scope.
         """
-        # First check DB cache to avoid API calls? 
-        # Or always check API to be safe? Safest is check API list.
-        
         try:
             service = self._get_service()
             # List labels
             response = service.users().labels().list(userId='me').execute()
             labels = response.get('labels', [])
             
-            # Check for existing
+            # Check for existing — don't modify colors on existing labels
             for label in labels:
                 if label['name'].lower() == name.lower():
                     self._cache_label_in_db(name, label['id'])
@@ -232,15 +230,25 @@ class GmailService:
                 "labelListVisibility": "labelShow",
                 "messageListVisibility": "show"
             }
+
+            # Optionally assign a random color
+            if getattr(self.user, 'enable_label_colors', False):
+                try:
+                    from app.utils.label_colors import get_label_color_body
+                    color = get_label_color_body()
+                    if color:
+                        label_body["color"] = color
+                        logger.info(f"GmailService: Assigning color {color['backgroundColor']} to label '{name}'")
+                except Exception as color_err:
+                    logger.warning(f"GmailService: Color generation failed, creating label without color: {color_err}")
+
             created_label = service.users().labels().create(userId='me', body=label_body).execute()
             self._cache_label_in_db(name, created_label['id'])
             logger.info(f"GmailService: Created label '{name}'")
-            print(f"Created label '{name}'")
             return created_label['id']
             
         except Exception as e:
             logger.error(f"GmailService: Failed to ensure label '{name}': {e}")
-            print(f"Failed to ensure label '{name}': {e}")
             raise e
 
     def _cache_label_in_db(self, name: str, gmail_id: str):
