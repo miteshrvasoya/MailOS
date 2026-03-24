@@ -49,6 +49,9 @@ export function Header() {
           <Link href="/features" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200">
             Features
           </Link>
+          <Link href="/#demo" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200">
+            Demo
+          </Link>
           <Link href="/#how-it-works" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200">
             How It Works
           </Link>
