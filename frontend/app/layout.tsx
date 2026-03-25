@@ -33,7 +33,7 @@ export default function RootLayout({
           {/* <Analytics /> */}
         </Providers>
         <Suspense fallback={null}>
-          {/* <GoogleAnalytics GA_MEASUREMENT_ID={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || 'G-VC77YKHTSY'} /> */}
+          <GoogleAnalytics GA_MEASUREMENT_ID={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || 'G-VC77YKHTSY'} />
         </Suspense>
       </body>
     </html>
