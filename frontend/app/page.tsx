@@ -465,46 +465,53 @@ export default function LandingPage() {
                 What MailOS actually does
               </h2>
               <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
-                No new inbox. No new workflow. Just clarity on top of Gmail.
+                Real-time AI processing on top of Gmail. No new inbox. No new workflow.
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[
                 {
+                  title: 'Real-time Push Processing',
+                  desc: 'Emails are processed within seconds of arriving via Gmail Push Notifications — no polling delays.',
+                  icon: Zap,
+                  color: 'text-accent-amber',
+                  bg: 'bg-accent-amber/10',
+                },
+                {
+                  title: 'AI Intent Classification',
+                  desc: 'Every email is classified by category, urgency, and importance using production-grade AI.',
+                  icon: Brain,
+                  color: 'text-primary',
+                  bg: 'bg-primary/10',
+                },
+                {
                   title: 'Detect Important Emails',
-                  desc: 'Surfaces time-sensitive messages so they don\'t get buried.',
+                  desc: 'Time-sensitive messages are surfaced instantly so they never get buried.',
                   icon: Star,
                   color: 'text-important',
                   bg: 'bg-important/10',
                 },
                 {
-                  title: 'Group Similar Emails',
-                  desc: 'Clusters newsletters, promotions, alerts, and updates.',
+                  title: 'Smart Grouping',
+                  desc: 'Newsletters, promotions, alerts, and updates are clustered automatically.',
                   icon: Layers,
                   color: 'text-grouped',
                   bg: 'bg-grouped/10',
                 },
                 {
-                  title: 'Filter Noise',
-                  desc: 'Pushes low-priority emails out of your main view.',
-                  icon: Filter,
-                  color: 'text-filtered',
-                  bg: 'bg-filtered/10',
-                },
-                {
-                  title: 'Extract Tasks',
-                  desc: 'Detects action items and deadlines from email content.',
+                  title: 'Auto Task Extraction',
+                  desc: 'Action items and deadlines are detected and tracked from email content.',
                   icon: ListTodo,
                   color: 'text-tasks',
                   bg: 'bg-tasks/10',
                 },
                 {
                   title: 'Daily Inbox Digest',
-                  desc: 'A scannable summary with sections, counts, and highlights.',
+                  desc: 'A scannable summary with sections, smart counts, and key highlights delivered daily.',
                   icon: FileText,
-                  color: 'text-primary',
-                  bg: 'bg-primary/10',
+                  color: 'text-accent-emerald',
+                  bg: 'bg-accent-emerald/10',
                 },
               ].map((f) => (
                 <div
@@ -533,37 +540,113 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ===================== HOW IT WORKS ===================== */}
+        {/* ===================== HOW IT WORKS — Real-time Pipeline ===================== */}
         <section id="how-it-works" className="px-6 py-20 md:py-28 max-w-7xl mx-auto scroll-mt-20">
           <div className="text-center space-y-4 mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-accent-emerald/10 text-accent-emerald text-sm font-medium border border-accent-emerald/20 mb-4">
+              <Zap className="w-3.5 h-3.5" />
+              Real-time, event-driven architecture
+            </div>
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight font-[family-name:var(--font-display)]">
-              Four steps to inbox clarity.
+              How MailOS <span className="gradient-text">processes your emails</span>
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
-              Short, simple, and designed for high-volume inboxes.
+              No polling. No delays. Emails are processed the instant they arrive in your inbox via Gmail Push Notifications.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 relative">
+          {/* Pipeline flow */}
+          <div className="relative">
             {/* Connecting line (desktop) */}
-            <div className="hidden lg:block absolute top-[3.5rem] left-[12%] right-[12%] h-[2px] bg-gradient-to-r from-primary/30 via-primary to-primary/30" />
+            <div className="hidden lg:block absolute top-[4rem] left-[8%] right-[8%] h-[2px] bg-gradient-to-r from-primary/20 via-primary/60 to-accent-emerald/20">
+              {/* Animated pulse on the line */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary to-transparent animate-pulse opacity-60" />
+            </div>
 
-            {[
-              { n: 1, title: 'Connect Gmail', desc: 'Read-only access, one click', icon: Mail },
-              { n: 2, title: 'MailOS analyzes emails', desc: 'AI classifies every message', icon: Brain },
-              { n: 3, title: 'Important emails surfaced', desc: 'See what actually matters', icon: Star },
-              { n: 4, title: 'View your daily digest', desc: 'One clean summary each day', icon: BarChart3 },
-            ].map((s) => (
-              <div key={s.n} className="rounded-2xl border border-border bg-card p-7 shadow-sm hover:shadow-lg transition-all group card-hover relative">
-                <div className="w-14 h-14 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center font-bold text-lg mb-5 group-hover:scale-110 transition-transform shadow-lg relative z-10">
-                  {s.n}
+            <div className="grid md:grid-cols-2 lg:grid-cols-6 gap-5 relative">
+              {[
+                {
+                  n: 1,
+                  title: 'New Email Arrives',
+                  desc: 'A new email lands in your Gmail inbox',
+                  icon: Mail,
+                  color: 'text-primary',
+                  bg: 'bg-primary',
+                  iconBg: 'bg-primary/10',
+                },
+                {
+                  n: 2,
+                  title: 'Gmail Notifies',
+                  desc: 'Gmail sends instant push notification via Pub/Sub',
+                  icon: Zap,
+                  color: 'text-accent-amber',
+                  bg: 'bg-accent-amber',
+                  iconBg: 'bg-accent-amber/10',
+                },
+                {
+                  n: 3,
+                  title: 'MailOS Receives',
+                  desc: 'Our webhook catches the event in real-time',
+                  icon: LayoutDashboard,
+                  color: 'text-accent-purple',
+                  bg: 'bg-accent-purple',
+                  iconBg: 'bg-accent-purple/10',
+                },
+                {
+                  n: 4,
+                  title: 'AI Classifies',
+                  desc: 'Categorized by intent, urgency & importance',
+                  icon: Brain,
+                  color: 'text-important',
+                  bg: 'bg-important',
+                  iconBg: 'bg-important/10',
+                },
+                {
+                  n: 5,
+                  title: 'Smart Actions',
+                  desc: 'Labels applied, tasks extracted, rules executed',
+                  icon: ListTodo,
+                  color: 'text-accent-emerald',
+                  bg: 'bg-accent-emerald',
+                  iconBg: 'bg-accent-emerald/10',
+                },
+                {
+                  n: 6,
+                  title: 'You Review',
+                  desc: 'One clean digest — see what matters instantly',
+                  icon: BarChart3,
+                  color: 'text-grouped',
+                  bg: 'bg-grouped',
+                  iconBg: 'bg-grouped/10',
+                },
+              ].map((s) => (
+                <div key={s.n} className="rounded-2xl border border-border bg-card p-5 shadow-sm hover:shadow-lg transition-all group card-hover relative flex flex-col">
+                  <div className={`w-12 h-12 rounded-2xl ${s.bg} text-white flex items-center justify-center font-bold text-sm mb-4 group-hover:scale-110 transition-transform shadow-lg relative z-10`}>
+                    {s.n}
+                  </div>
+                  <p className="font-semibold text-foreground group-hover:text-primary transition-colors mb-1.5 text-sm">
+                    {s.title}
+                  </p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{s.desc}</p>
                 </div>
-                <p className="font-semibold text-foreground group-hover:text-primary transition-colors mb-2">
-                  {s.title}
-                </p>
-                <p className="text-sm text-muted-foreground">{s.desc}</p>
+              ))}
+            </div>
+          </div>
+
+          {/* Tech detail callout */}
+          <div className="mt-12 rounded-2xl border border-primary/20 bg-primary/5 p-6 md:p-8 max-w-4xl mx-auto">
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <ShieldCheck className="w-6 h-6 text-primary" />
               </div>
-            ))}
+              <div className="space-y-1">
+                <h4 className="font-bold text-foreground">Gmail Push via Google Pub/Sub</h4>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  MailOS uses the official Gmail Watch API and Google Cloud Pub/Sub for secure, real-time notifications.
+                  No polling — emails are processed within seconds of arriving, with idempotent deduplication and automatic retry.
+                </p>
+              </div>
+            </div>
           </div>
         </section>
 
