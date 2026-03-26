@@ -27,6 +27,11 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: Optional[str] = None
     GOOGLE_REDIRECT_URI: Optional[str] = "http://localhost:3000/api/auth/callback/google"
 
+    # Google Cloud Pub/Sub (Gmail Push Notifications)
+    GOOGLE_CLOUD_PROJECT_ID: Optional[str] = None
+    PUBSUB_TOPIC_NAME: str = "mailos-email-events"
+    PUBSUB_VERIFICATION_TOKEN: Optional[str] = None
+
     # SMTP / Admin Notifications
     SMTP_HOST: str = "smtp.gmail.com"
     SMTP_PORT: int = 587

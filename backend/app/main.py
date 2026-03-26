@@ -154,6 +154,22 @@ async def lifespan(app: FastAPI):
             name="Gmail Background Sync",
             replace_existing=True,
         )
+
+        # Gmail Watch renewal — runs daily to renew expiring Pub/Sub watches
+        try:
+            from app.services.watch_service import renew_all_watches
+            scheduler.add_job(
+                renew_all_watches,
+                "interval",
+                hours=24,
+                id="gmail_watch_renewal",
+                name="Gmail Watch Renewal",
+                replace_existing=True,
+            )
+            logger.info("Gmail watch renewal cron registered (every 24 hours)")
+        except Exception as watch_err:
+            logger.warning(f"Could not register watch renewal cron: {watch_err}")
+
         scheduler.start()
         logger.info("Background sync scheduler started (every 1 hour)")
     except ImportError:

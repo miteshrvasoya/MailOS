@@ -12,11 +12,15 @@ from .notification import Notification
 from .ai_log import AILog
 from .task import Task
 from .auto_clean_rule import AutoCleanRule
+from .gmail_watch import GmailWatch
+from .processed_message import ProcessedMessage
 
 # For Alembic/SQLModel to detect
 __all__ = [
     "User", "EmailInsight", "Rule", "UserIntentPreference", 
     "EmailAction", "GmailLabel", "GoogleCredential", 
     "Category", "SnoozedEmail", "Digest", "Notification",
-    "AILog", "Task", "AutoCleanRule"
+    "AILog", "Task", "AutoCleanRule",
+    "GmailWatch", "ProcessedMessage",
 ]
+
