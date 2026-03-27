@@ -56,7 +56,7 @@ export const metadata: Metadata = {
     siteName: 'MailOS',
     images: [
       {
-        url: 'https://pub-2a4eb4e23d7d4d18bc7ca5d587d38902.r2.dev/landing-page-2.png',
+        url: 'https://pub-2a4eb4e23d7d4d18bc7ca5d587d38902.r2.dev/landing-page-3.png',
         width: 1200,
         height: 630,
         alt: 'MailOS — Inbox clarity on top of Gmail',
@@ -70,7 +70,7 @@ export const metadata: Metadata = {
     title: 'MailOS — Stop Missing Important Emails in 200+ Daily Messages',
     description: 'Drowning in emails? MailOS detects what matters, groups the rest, and gives you one clean daily summary. Never miss an important email again.',
     creator: '@mailos_precizn',
-    images: ['https://pub-2a4eb4e23d7d4d18bc7ca5d587d38902.r2.dev/landing-page-2.png'],
+    images: ['https://pub-2a4eb4e23d7d4d18bc7ca5d587d38902.r2.dev/landing-page-3.png'],
   },
 }
 

@@ -2,14 +2,13 @@ import Link from 'next/link'
 import { Header } from '@/components/header'
 import { Footer } from '@/components/footer'
 import { Button } from '@/components/ui/button'
-import { Check, Tag, ArrowRight } from 'lucide-react'
+import { Check, Gift, ArrowRight, Sparkles, Rocket } from 'lucide-react'
 
 const plans = [
   {
-    name: 'Free',
+    name: 'Starter',
     description: 'Perfect for getting started and exploring.',
-    price: '$0',
-    period: '/month',
+    originalPrice: '$0',
     features: [
       'Up to 1,000 emails/month',
       'Smart AI grouping',
@@ -17,31 +16,27 @@ const plans = [
       'Basic AI classification',
       'Community support'
     ],
-    cta: 'Start for Free',
-    href: '/login',
+    cta: 'Get Free Access',
     highlighted: false
   },
   {
     name: 'Pro',
     description: 'For power users needing robust email management.',
-    price: '$15',
-    period: '/month',
+    originalPrice: '$15',
     features: [
       'Unlimited emails processed',
-      'All Free features',
+      'All Starter features',
       'Daily AI digest summary',
       'Custom filtering rules',
       'Priority email support',
     ],
-    cta: 'Upgrade to Pro',
-    href: '/checkout?plan=pro',
+    cta: 'Get Free Access',
     highlighted: false
   },
   {
     name: 'Premium',
     description: 'Advanced AI and total workflow automation.',
-    price: '$29',
-    period: '/month',
+    originalPrice: '$29',
     features: [
       'Everything in Pro',
       'Advanced AI learning & adaptation',
@@ -50,12 +45,9 @@ const plans = [
       'Dedicated 24/7 support',
       'Early access to new features'
     ],
-    cta: 'Get Premium',
-    href: '/checkout?plan=premium',
+    cta: 'Get Free Access',
     highlighted: true,
-    badge: 'Most Popular',
-    discountCode: 'PREMIUM50',
-    discountText: 'Save 50% with code'
+    badge: 'Best Value',
   }
 ]
 
@@ -64,21 +56,30 @@ export default function PricingPage() {
     <main className="min-h-screen bg-background flex flex-col">
       <Header />
       
-      {/* Announcement Banner */}
-      <div className="bg-gradient-to-r from-primary to-accent-purple text-white py-3 px-6 shadow-sm">
+      {/* Launch Offer Banner */}
+      <div className="bg-gradient-to-r from-accent-emerald via-primary to-accent-purple text-white py-4 px-6 shadow-lg">
         <div className="max-w-7xl mx-auto text-center flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4">
-          <span className="bg-white/20 px-2.5 py-0.5 rounded-full text-xs font-bold tracking-wider uppercase">Launch Offer</span>
-          <span className="text-sm font-medium">Use code <strong>LAUNCH20</strong> at checkout for 20% off all plans!</span>
+          <span className="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold tracking-wider uppercase flex items-center gap-1.5">
+            <Rocket className="w-3.5 h-3.5" />
+            Launch Offer
+          </span>
+          <span className="text-sm sm:text-base font-semibold">
+            🎉 All plans are <strong>100% FREE</strong> during our launch period — no credit card required!
+          </span>
         </div>
       </div>
       
       <section className="px-6 py-20 lg:py-28 max-w-7xl mx-auto flex-1 w-full">
         <div className="text-center space-y-4 mb-16 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-accent-emerald/10 text-accent-emerald text-sm font-semibold border border-accent-emerald/20 mb-2">
+            <Gift className="w-4 h-4" />
+            Everything free — limited time only
+          </div>
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight font-[family-name:var(--font-display)]">
-            Simple, transparent <span className="gradient-text">pricing</span>
+            All features, <span className="gradient-text">completely free</span>
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Choose the perfect plan to reclaim hours of your time every week.
+            We're launching MailOS and want you to experience the full power — every feature, every plan, at zero cost.
           </p>
         </div>
         
@@ -107,16 +108,22 @@ export default function PricingPage() {
               </div>
               
               <div className="mb-6">
-                <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-bold text-foreground">{plan.price}</span>
-                  {plan.period && <span className="text-muted-foreground font-medium">{plan.period}</span>}
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-bold text-foreground">$0</span>
+                  <span className="text-muted-foreground font-medium">/month</span>
                 </div>
-                {plan.discountCode && (
-                  <div className="mt-2 text-sm font-medium text-green-600 flex items-center gap-1.5 bg-green-50 dark:bg-green-950/30 w-fit px-2.5 py-1 rounded-md">
-                    <Tag className="w-3.5 h-3.5" />
-                    {plan.discountText} <span className="font-bold">{plan.discountCode}</span>
+                {plan.originalPrice !== '$0' && (
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground line-through">{plan.originalPrice}/mo</span>
+                    <span className="text-xs font-bold text-accent-emerald bg-accent-emerald/10 px-2 py-0.5 rounded-full">
+                      FREE
+                    </span>
                   </div>
                 )}
+                <div className="mt-3 text-sm font-medium text-accent-emerald flex items-center gap-1.5 bg-accent-emerald/5 dark:bg-accent-emerald/10 w-fit px-3 py-1.5 rounded-lg border border-accent-emerald/20">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Free during launch
+                </div>
               </div>
               
               <Button
@@ -124,7 +131,7 @@ export default function PricingPage() {
                 variant={plan.highlighted ? 'default' : 'outline'}
                 asChild
               >
-                <Link href={plan.href}>
+                <Link href="/login">
                   {plan.cta}
                   <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                 </Link>
@@ -153,16 +160,16 @@ export default function PricingPage() {
           <div className="grid sm:grid-cols-2 gap-x-12 gap-y-10">
             {[
               {
-                q: 'Can I upgrade or downgrade anytime?',
-                a: 'Yes! You can change your plan at any time from your dashboard. Changes take effect immediately and are prorated.'
+                q: 'Is MailOS really free right now?',
+                a: 'Yes! During our launch period, every plan and every feature is completely free. No credit card required — just sign up with Google and start using MailOS.'
               },
               {
-                q: 'What payment methods do you accept?',
-                a: 'We accept all major credit cards including Visa, Mastercard, American Express, and Discover via Stripe.'
+                q: 'Will I be charged when the free period ends?',
+                a: 'No. We will notify you well in advance before any pricing changes. You will never be charged without your explicit consent.'
               },
               {
-                q: 'Do you offer refunds?',
-                a: "Yes, we offer a 30-day money-back guarantee if you're not satisfied with the product. No questions asked."
+                q: 'Which plan should I pick?',
+                a: "Since all plans are free, we recommend starting with Premium to get the full experience. You'll have access to every feature including advanced AI and priority support."
               },
               {
                 q: 'Is my email data secure?',

@@ -5,181 +5,175 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Header } from '@/components/header'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { CheckCircle2, Shield, Lock, CreditCard, ArrowRight, Loader2, Tag } from 'lucide-react'
+import { CheckCircle2, Shield, ArrowRight, Loader2, Sparkles, Gift, Rocket, Check } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
+import { signIn } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
 
-const PLANS = {
-  free: { name: 'Free', price: 0, interval: 'month' },
-  pro: { name: 'Pro', price: 15, interval: 'month' },
-  premium: { name: 'Premium', price: 29, interval: 'month' },
+const PLANS: Record<string, { name: string; originalPrice: number; features: string[] }> = {
+  free: {
+    name: 'Starter',
+    originalPrice: 0,
+    features: [
+      'Up to 1,000 emails/month',
+      'Smart AI grouping',
+      'Weekly digest summary',
+      'Basic AI classification',
+    ],
+  },
+  starter: {
+    name: 'Starter',
+    originalPrice: 0,
+    features: [
+      'Up to 1,000 emails/month',
+      'Smart AI grouping',
+      'Weekly digest summary',
+      'Basic AI classification',
+    ],
+  },
+  pro: {
+    name: 'Pro',
+    originalPrice: 15,
+    features: [
+      'Unlimited emails processed',
+      'Daily AI digest summary',
+      'Custom filtering rules',
+      'Priority email support',
+    ],
+  },
+  premium: {
+    name: 'Premium',
+    originalPrice: 29,
+    features: [
+      'Everything in Pro',
+      'Advanced AI learning & adaptation',
+      'Multiple custom digests',
+      'Dedicated 24/7 support',
+      'Early access to new features',
+    ],
+  },
 }
 
 function CheckoutContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const planKey = searchParams.get('plan')?.toLowerCase() || 'pro'
+  const planKey = searchParams.get('plan')?.toLowerCase() || 'premium'
   const { toast } = useToast()
+  const { isAuthenticated } = useAuth()
 
-  const selectedPlan = PLANS[planKey as keyof typeof PLANS] || PLANS.pro
-  
-  const [coupon, setCoupon] = useState('')
-  const [appliedCoupon, setAppliedCoupon] = useState<{code: string, discount: number} | null>(null)
+  const selectedPlan = PLANS[planKey] || PLANS.premium
+
   const [isProcessing, setIsProcessing] = useState(false)
-  const [couponError, setCouponError] = useState('')
 
-  const basePrice = selectedPlan.price
-  const discountAmount = appliedCoupon ? (basePrice * appliedCoupon.discount) / 100 : 0
-  const finalPrice = Math.max(0, basePrice - discountAmount)
+  const handleClaimAccess = () => {
+    setIsProcessing(true)
 
-  const handleApplyCoupon = () => {
-    setCouponError('')
-    if (!coupon.trim()) return
-
-    // Mock coupon logic
-    if (coupon.toUpperCase() === 'LAUNCH20') {
-      setAppliedCoupon({ code: 'LAUNCH20', discount: 20 })
-      toast({ title: 'Coupon applied!', description: 'You got 20% off your subscription.' })
-    } else if (coupon.toUpperCase() === 'PREMIUM50' && planKey === 'premium') {
-      setAppliedCoupon({ code: 'PREMIUM50', discount: 50 })
-      toast({ title: 'Special discount applied!', description: 'You got 50% off the Premium plan.' })
+    if (isAuthenticated) {
+      // Already logged in — go directly to dashboard
+      toast({
+        title: '🎉 Welcome to MailOS!',
+        description: `You now have full ${selectedPlan.name} access — free during our launch!`,
+      })
+      setTimeout(() => router.push('/dashboard'), 800)
     } else {
-      setCouponError('Invalid or expired coupon code.')
-      setAppliedCoupon(null)
+      // Not logged in — trigger Google sign-in
+      toast({
+        title: 'Redirecting to sign up...',
+        description: 'Sign in with Google to activate your free access.',
+      })
+      setTimeout(() => signIn('google', { callbackUrl: '/dashboard' }), 800)
     }
   }
 
-  const handleCheckout = () => {
-    setIsProcessing(true)
-    // Simulate API call for payment processing
-    setTimeout(() => {
-      setIsProcessing(false)
-      toast({
-        title: 'Payment successful!',
-        description: `Welcome to the ${selectedPlan.name} plan.`,
-      })
-      router.push('/dashboard')
-    }, 2000)
-  }
-
   return (
-    <div className="max-w-6xl mx-auto px-6 py-12 md:py-24">
-      <div className="flex flex-col md:flex-row gap-12 lg:gap-24">
-        
-        {/* Left Column: Checkout Form */}
-        <div className="flex-1 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight mb-2">Complete your upgrade</h1>
-            <p className="text-muted-foreground">You are upgrading to the <span className="font-semibold text-foreground">{selectedPlan.name}</span> plan. Secure payment powered by Stripe.</p>
-          </div>
-
-          <Card className="p-6 md:p-8 border-border shadow-sm">
-            <h2 className="text-lg font-semibold mb-6 flex items-center gap-2">
-              <CreditCard className="w-5 h-5 text-primary" />
-              Payment Details
-            </h2>
-            
-            <div className="space-y-4">
-              {/* Mock Payment Form */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Card Information</label>
-                <div className="h-12 w-full rounded-md border border-input bg-background px-3 py-2 flex items-center justify-between opacity-70 cursor-not-allowed">
-                  <span className="text-muted-foreground flex items-center gap-2">
-                    <CreditCard className="w-4 h-4" /> 
-                    •••• •••• •••• 4242
-                  </span>
-                  <span className="text-xs text-muted-foreground">MM/YY CVC</span>
-                </div>
-                <p className="text-xs text-muted-foreground">This is a mock checkout for demonstration.</p>
-              </div>
-
-              <div className="space-y-2 pt-2">
-                <label className="text-sm font-medium">Name on Card</label>
-                <input 
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  placeholder="Jane Doe"
-                  defaultValue="Test User"
-                />
-              </div>
-            </div>
-
-            <div className="mt-8 pt-6 border-t border-border">
-              <Button 
-                className="w-full text-base h-12" 
-                onClick={handleCheckout} 
-                disabled={isProcessing}
-              >
-                {isProcessing ? (
-                   <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Processing...</>
-                ) : (
-                  <>Pay ${finalPrice.toFixed(2)} / {selectedPlan.interval} <ArrowRight className="ml-2 w-4 h-4" /></>
-                )}
-              </Button>
-              <div className="flex items-center justify-center gap-2 mt-4 text-xs text-muted-foreground">
-                <Lock className="w-3 h-3" />
-                <span>Secure 256-bit SSL encryption</span>
-              </div>
-            </div>
-          </Card>
+    <div className="max-w-3xl mx-auto px-6 py-12 md:py-24">
+      <div className="text-center space-y-4 mb-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-accent-emerald/10 text-accent-emerald text-sm font-semibold border border-accent-emerald/20">
+          <Rocket className="w-4 h-4" />
+          Launch Offer — 100% Free
         </div>
+        <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+          Claim your <span className="gradient-text">{selectedPlan.name}</span> plan
+        </h1>
+        <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+          All features are free during our launch period. No credit card. No commitments.
+        </p>
+      </div>
 
-        {/* Right Column: Order Summary */}
-        <div className="w-full md:w-80 lg:w-96 space-y-6 animate-in fade-in slide-in-from-right-4 duration-500 delay-150">
-          <Card className="p-6 bg-secondary/20 border-border">
-            <h3 className="font-semibold mb-6">Order Summary</h3>
-            
-            <div className="flex justify-between items-center mb-4 text-sm">
-              <span className="font-medium text-foreground">{selectedPlan.name} Plan</span>
-              <span>${basePrice.toFixed(2)}/{selectedPlan.interval}</span>
+      <Card className="p-8 md:p-10 border-border shadow-lg animate-in fade-in slide-in-from-bottom-6 duration-700 delay-150">
+        {/* Plan Summary */}
+        <div className="flex items-center justify-between mb-6 pb-6 border-b border-border">
+          <div>
+            <h2 className="text-xl font-bold text-foreground">{selectedPlan.name} Plan</h2>
+            <p className="text-sm text-muted-foreground mt-1">Full access, no restrictions</p>
+          </div>
+          <div className="text-right">
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-bold text-foreground">$0</span>
+              <span className="text-muted-foreground text-sm">/mo</span>
             </div>
-            
-            {appliedCoupon && (
-              <div className="flex justify-between items-center mb-4 text-sm text-green-600 font-medium">
-                <span className="flex items-center gap-1"><Tag className="w-3 h-3" /> Discount ({appliedCoupon.code})</span>
-                <span>-${discountAmount.toFixed(2)}</span>
+            {selectedPlan.originalPrice > 0 && (
+              <div className="flex items-center gap-1.5 mt-1 justify-end">
+                <span className="text-sm text-muted-foreground line-through">${selectedPlan.originalPrice}/mo</span>
+                <span className="text-xs font-bold text-accent-emerald bg-accent-emerald/10 px-2 py-0.5 rounded-full">FREE</span>
               </div>
             )}
-
-            <div className="border-t border-border/50 my-4 pt-4 flex justify-between items-center">
-              <span className="font-semibold">Total due today</span>
-              <span className="text-2xl font-bold">${finalPrice.toFixed(2)}</span>
-            </div>
-
-            {/* Coupon input */}
-            <div className="pt-4 border-t border-border/50">
-              <label className="text-xs font-medium text-muted-foreground mb-2 block">Have a coupon code?</label>
-              <div className="flex gap-2">
-                <input 
-                  type="text" 
-                  value={coupon}
-                  onChange={(e) => setCoupon(e.target.value)}
-                  placeholder="e.g. LAUNCH20"
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors uppercase"
-                />
-                <Button variant="secondary" size="sm" onClick={handleApplyCoupon} className="h-9">Apply</Button>
-              </div>
-              {couponError && <p className="text-xs text-destructive mt-2">{couponError}</p>}
-            </div>
-          </Card>
-
-          <div className="space-y-4 pt-4">
-            <div className="flex items-start gap-3">
-              <Shield className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="text-sm font-semibold">30-Day Guarantee</h4>
-                <p className="text-xs text-muted-foreground">Not satisfied? Get a full refund within 30 days, no questions asked.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="text-sm font-semibold">Cancel Anytime</h4>
-                <p className="text-xs text-muted-foreground">You can cancel your subscription at any moment from your settings.</p>
-              </div>
-            </div>
           </div>
         </div>
 
-      </div>
+        {/* Features */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
+          {selectedPlan.features.map((feature, i) => (
+            <div key={i} className="flex items-center gap-2.5 text-sm">
+              <Check className="w-4 h-4 text-accent-emerald flex-shrink-0" />
+              <span className="text-foreground/80">{feature}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Launch badge */}
+        <div className="rounded-xl bg-accent-emerald/5 dark:bg-accent-emerald/10 border border-accent-emerald/20 p-4 mb-8 flex items-start gap-3">
+          <Gift className="w-5 h-5 text-accent-emerald flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-foreground">Free during launch 🎉</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              We'll notify you before any pricing changes. You'll never be charged without consent.
+            </p>
+          </div>
+        </div>
+
+        {/* CTA Button */}
+        <Button
+          className="w-full text-base h-13 font-semibold group shadow-lg hover:shadow-primary/25"
+          onClick={handleClaimAccess}
+          disabled={isProcessing}
+        >
+          {isProcessing ? (
+            <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Setting up your account...</>
+          ) : (
+            <>
+              <Sparkles className="w-5 h-5 mr-2" />
+              {isAuthenticated ? 'Go to Dashboard' : 'Get Free Access with Google'}
+              <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+            </>
+          )}
+        </Button>
+
+        <div className="flex items-center justify-center gap-6 mt-6 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1.5">
+            <Shield className="w-3.5 h-3.5 text-accent-emerald" />
+            <span>No credit card</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+            <span>Cancel anytime</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-accent-emerald animate-pulse" />
+            <span>Read-only access</span>
+          </div>
+        </div>
+      </Card>
     </div>
   )
 }
@@ -198,4 +192,5 @@ export default function CheckoutPage() {
     </main>
   )
 }
+
 
