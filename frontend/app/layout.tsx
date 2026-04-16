@@ -27,6 +27,9 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${plusJakarta.variable} font-sans antialiased bg-background text-foreground`}>
+        <a href="https://www.foundrlist.com/product/mailos?utm_source=badge&amp;utm_medium=embed" target="_blank" rel="noopener">
+          <img src="https://www.foundrlist.com/api/badge/mailos" alt="Featured on FoundrList" width="150" height="48" />
+        </a>
         <Providers>
           <UTMTracker />
           {children}
