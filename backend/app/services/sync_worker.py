@@ -123,9 +123,12 @@ def run_background_sync():
         results = []
         
         for user in users:
-            # Skip if synced recently
-            if user.last_sync_at and (now - user.last_sync_at) < MIN_SYNC_INTERVAL:
-                logger.debug(f"Skipping user {user.id}: synced {(now - user.last_sync_at).seconds}s ago")
+            # Respect user-specific interval (with a 5-min floor to avoid API abuse)
+            interval_minutes = max(5, user.sync_interval_minutes or 60)
+            interval = timedelta(minutes=interval_minutes)
+            
+            if user.last_sync_at and (now - user.last_sync_at) < interval:
+                logger.debug(f"Skipping user {user.id}: synced {(now - user.last_sync_at).seconds}s ago, interval {interval_minutes}m")
                 continue
                 
             result = sync_user_emails(user, db)

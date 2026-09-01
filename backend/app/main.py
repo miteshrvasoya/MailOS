@@ -149,7 +149,7 @@ async def lifespan(app: FastAPI):
         scheduler.add_job(
             run_background_sync,
             "interval",
-            hours=1,
+            minutes=5,
             id="gmail_background_sync",
             name="Gmail Background Sync",
             replace_existing=True,

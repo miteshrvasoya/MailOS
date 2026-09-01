@@ -18,6 +18,7 @@ class UserSettingsUpdate(BaseModel):
     label_prefix: str | None = None
     apply_prefix_to_existing: bool | None = None
     enable_label_colors: bool | None = None
+    sync_interval_minutes: int | None = None
 
 class UserSettingsResponse(BaseModel):
     auto_fetch_enabled: bool
@@ -27,6 +28,7 @@ class UserSettingsResponse(BaseModel):
     label_prefix: str
     apply_prefix_to_existing: bool
     enable_label_colors: bool
+    sync_interval_minutes: int
 
 def _build_response(user: User) -> UserSettingsResponse:
     return UserSettingsResponse(
@@ -37,6 +39,7 @@ def _build_response(user: User) -> UserSettingsResponse:
         label_prefix=user.label_prefix,
         apply_prefix_to_existing=user.apply_prefix_to_existing,
         enable_label_colors=user.enable_label_colors,
+        sync_interval_minutes=user.sync_interval_minutes,
     )
 
 @router.get("/", response_model=UserSettingsResponse)
@@ -77,6 +80,8 @@ def update_user_settings(
         user.enable_label_colors = settings_in.enable_label_colors
     if settings_in.label_prefix is not None:
         user.label_prefix = settings_in.label_prefix
+    if settings_in.sync_interval_minutes is not None:
+        user.sync_interval_minutes = settings_in.sync_interval_minutes
 
     db.add(user)
     db.commit()
