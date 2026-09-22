@@ -15,6 +15,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { trackEvent } from '@/lib/analytics'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
+import { PageLoader } from '@/components/ui/page-loader'
 
 interface Action {
   id: string
@@ -319,11 +320,7 @@ export default function SuggestionsPage() {
   // ─── Render ─────────────────────────────────────────────────────
 
   if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary/50" />
-      </div>
-    )
+    return <PageLoader />
   }
 
   return (

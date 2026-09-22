@@ -6,7 +6,7 @@ import api from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
+import { PageLoader } from '@/components/ui/page-loader'
 import { useToast } from '@/components/ui/use-toast'
 import {
   AlarmClock, Clock, Bell, X, Loader2, Mail, 
@@ -64,6 +64,10 @@ export default function SnoozedPage() {
     }
   }
 
+  if (loading) {
+    return <PageLoader />
+  }
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Header */}
@@ -83,14 +87,7 @@ export default function SnoozedPage() {
         </Badge>
       </div>
 
-      {/* Content */}
-      {loading ? (
-        <div className="grid gap-3">
-          <Skeleton className="h-20" />
-          <Skeleton className="h-20" />
-          <Skeleton className="h-20" />
-        </div>
-      ) : snoozed.length === 0 ? (
+      {snoozed.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center p-12 text-center">
             <AlarmClock className="w-12 h-12 text-muted-foreground mb-4" />

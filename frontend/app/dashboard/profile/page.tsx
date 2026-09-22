@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { signOut } from 'next-auth/react'
 import { User, Mail, Calendar, Hash } from 'lucide-react'
+import { PageLoader } from '@/components/ui/page-loader'
 
 interface UserProfile {
   id: string
@@ -38,7 +39,7 @@ export default function ProfilePage() {
   }, [user])
 
   if (loading) {
-    return <div className="p-8 text-muted-foreground">Loading profile...</div>
+    return <PageLoader />
   }
 
   if (!profile) {

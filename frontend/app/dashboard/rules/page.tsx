@@ -15,7 +15,7 @@ import {
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
+import { PageLoader } from '@/components/ui/page-loader'
 import { useToast } from '@/components/ui/use-toast'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
@@ -420,6 +420,10 @@ export default function RulesPage() {
 
   // ─── Render ─────────────────────────────────────────────────────
 
+  if (loading) {
+    return <PageLoader />
+  }
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
       {/* Header */}
@@ -666,8 +670,8 @@ export default function RulesPage() {
         </div>
 
         {loadingTemplates ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <Skeleton className="h-36" /><Skeleton className="h-36" /><Skeleton className="h-36" />
+          <div className="flex items-center justify-center p-12">
+             <PageLoader />
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -759,9 +763,7 @@ export default function RulesPage() {
           {!loading && <Badge variant="outline" className="ml-1">{allRules.length}</Badge>}
         </div>
 
-        {loading ? (
-          <div className="space-y-3"><Skeleton className="h-24 w-full" /><Skeleton className="h-24 w-full" /></div>
-        ) : allRules.length === 0 ? (
+        {allRules.length === 0 ? (
           <Card className="border-dashed bg-card/50">
             <CardContent className="flex flex-col items-center justify-center p-12 text-center">
               <div className="w-16 h-16 bg-secondary/50 rounded-full flex items-center justify-center mb-4">

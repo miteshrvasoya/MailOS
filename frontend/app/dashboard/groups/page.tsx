@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
-import { Skeleton } from '@/components/ui/skeleton'
+import { PageLoader } from '@/components/ui/page-loader'
 import { useToast } from '@/components/ui/use-toast'
 import {
   Plus, Pin, PinOff, Trash2, Pencil, X, Check,
@@ -184,6 +184,10 @@ export default function CategoriesPage() {
   const pinnedCategories = categories.filter(c => c.is_pinned)
   const unpinnedCategories = categories.filter(c => !c.is_pinned)
 
+  if (loading) {
+    return <PageLoader />
+  }
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Header */}
@@ -266,15 +270,7 @@ export default function CategoriesPage() {
         </Card>
       )}
 
-      {/* Loading */}
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
-        </div>
-      ) : categories.length === 0 ? (
+      {categories.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center p-12 text-center">
             <Tag className="w-12 h-12 text-muted-foreground mb-4" />

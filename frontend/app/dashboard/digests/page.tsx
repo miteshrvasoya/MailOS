@@ -6,7 +6,7 @@ import api from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
+import { PageLoader } from '@/components/ui/page-loader'
 import { useToast } from '@/components/ui/use-toast'
 import {
   FileText, RefreshCw, Loader2, Mail, Star,
@@ -125,6 +125,10 @@ export default function DigestsPage() {
     })
   }
 
+  if (loading) {
+    return <PageLoader />
+  }
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Header */}
@@ -169,17 +173,7 @@ export default function DigestsPage() {
         </div>
       </div>
 
-      {loading ? (
-        <div className="space-y-4">
-          <div className="grid grid-cols-4 gap-4">
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
-          </div>
-          <Skeleton className="h-64" />
-        </div>
-      ) : !latest ? (
+      {!latest ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center p-16 text-center">
             <FileText className="w-16 h-16 text-muted-foreground mb-4" />

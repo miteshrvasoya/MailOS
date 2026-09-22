@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { 
   Bell, Mail, FileText, Settings, Shield, Zap, CheckCircle, Trash2, Check, 
-  Sparkles, Filter, BellRing, Archive, MoreHorizontal, ExternalLink
+  Sparkles, Filter, BellRing, X, AlertCircle, Info, Clock, ExternalLink, CheckCircle2, Archive, MoreHorizontal
 } from 'lucide-react'
+import { PageLoader } from '@/components/ui/page-loader'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -254,14 +255,7 @@ export default function NotificationsPage() {
   const unreadCount = notifications.filter(n => !n.is_read).length
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="relative">
-          <div className="w-12 h-12 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
-          <Bell className="w-5 h-5 absolute inset-0 m-auto text-primary/50" />
-        </div>
-      </div>
-    )
+    return <PageLoader />
   }
 
   return (

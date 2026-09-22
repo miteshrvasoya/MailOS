@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { Loader2, RefreshCw, Mail, TrendingUp, Zap, AlertCircle, ArrowRight, CheckCircle, Star, Layers, Filter, ListTodo, Search, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { PageLoader } from '@/components/ui/page-loader'
 import Link from 'next/link'
 import { useAuth } from '@/hooks/useAuth'
 import { useRef, useState, useEffect } from 'react'
@@ -183,6 +184,10 @@ export default function DashboardPage() {
     return 'Good evening'
   }
 
+  if (loading) {
+    return <PageLoader />
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="p-6 lg:p-8 max-w-7xl mx-auto">
@@ -256,21 +261,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="space-y-3">
-            {loading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <Card key={i} className="p-5 border-border/50 overflow-hidden">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 space-y-3">
-                        <div className="h-4 rounded w-3/4 skeleton-shimmer" />
-                        <div className="h-3 rounded w-1/2 skeleton-shimmer" style={{ animationDelay: '0.15s' }} />
-                      </div>
-                      <div className="h-8 w-24 rounded skeleton-shimmer" style={{ animationDelay: '0.3s' }} />
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            ) : emails.length === 0 ? (
+            {emails.length === 0 ? (
               <Card className="p-12 border-border/50 border-dashed text-center flex flex-col items-center justify-center bg-card/30">
                 <div className="relative mb-6">
                    <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
@@ -350,15 +341,7 @@ export default function DashboardPage() {
             </Button>
           </h2>
             <div className="space-y-3">
-              {loading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map((i) => (
-                    <Card key={i} className="p-4 border-border/50">
-                      <div className="h-4 rounded w-2/3 skeleton-shimmer" />
-                    </Card>
-                  ))}
-                </div>
-              ) : digestPreviewSections.length > 0 ? (
+              {digestPreviewSections.length > 0 ? (
                 <>
                   {digestPreviewSections.slice(0, 5).map((section, i) => (
                     <Link href="/dashboard/digests" key={i} prefetch={false}>

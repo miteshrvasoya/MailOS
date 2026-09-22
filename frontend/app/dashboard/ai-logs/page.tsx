@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth'
 import api from '@/lib/api'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
+import { PageLoader } from '@/components/ui/page-loader'
 import { Button } from '@/components/ui/button'
 import {
   Brain, Clock, Zap, AlertTriangle, CheckCircle2,
@@ -80,6 +80,10 @@ export default function AILogsPage() {
     fetchData()
   }, [fetchData])
 
+  if (loading) {
+    return <PageLoader />
+  }
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Header */}
@@ -99,11 +103,8 @@ export default function AILogsPage() {
         </Button>
       </div>
 
-      {/* Summary Stats */}
-      {loading ? (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          {Array(5).fill(0).map((_, i) => <Skeleton key={i} className="h-24" />)}
-        </div>
+      {!summary ? (
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4" />
       ) : summary && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <StatCard label="Total Calls" value={summary.total_calls.toString()} icon={<Activity className="w-5 h-5" />} color="text-blue-500" />
@@ -134,14 +135,7 @@ export default function AILogsPage() {
         ))}
       </div>
 
-      {/* Logs List */}
-      {loading ? (
-        <div className="space-y-3">
-          <Skeleton className="h-16" />
-          <Skeleton className="h-16" />
-          <Skeleton className="h-16" />
-        </div>
-      ) : logs.length === 0 ? (
+      {logs.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center p-12 text-center">
             <Brain className="w-12 h-12 text-muted-foreground mb-4" />

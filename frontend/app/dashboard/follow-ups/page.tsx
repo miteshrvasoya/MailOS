@@ -6,13 +6,14 @@ import api from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
+
 import { useToast } from '@/components/ui/use-toast'
 import {
   Clock, Reply, Hourglass, Check, X, RefreshCw,
   AlertTriangle, ArrowRight, Loader2, Scan, Mail
 } from 'lucide-react'
 import { formatDistanceToNow, isPast, format } from 'date-fns'
+import { PageLoader } from '@/components/ui/page-loader'
 
 interface FollowUpItem {
   id: string
@@ -119,6 +120,9 @@ export default function FollowUpsPage() {
       setProcessing(null)
     }
   }
+  if (loading) {
+    return <PageLoader />
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -145,13 +149,7 @@ export default function FollowUpsPage() {
       </div>
 
       {/* Summary Cards */}
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
-        </div>
-      ) : summary && (
+      {summary && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="border-l-4 border-l-blue-500">
             <CardContent className="pt-5">
@@ -245,13 +243,7 @@ function Section({
   emptyMessage, emptyIcon,
 }: SectionProps) {
   if (loading) {
-    return (
-      <div className="space-y-3">
-        <Skeleton className="h-6 w-48" />
-        <Skeleton className="h-20" />
-        <Skeleton className="h-20" />
-      </div>
-    )
+    return null
   }
 
   return (

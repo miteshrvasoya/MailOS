@@ -22,7 +22,7 @@ import { TrendingUp, AlertCircle, Clock, Target, Zap, Settings } from 'lucide-re
 import Link from 'next/link'
 import api from '@/lib/api'
 import { useAuth } from '@/hooks/useAuth'
-import { Skeleton } from '@/components/ui/skeleton'
+import { PageLoader } from '@/components/ui/page-loader'
 
 type CategoryDatum = { category: string; count: number }
 type TrendDatum = { date: string; important: number; total: number }
@@ -99,6 +99,10 @@ export default function InsightsPage() {
 
   const pieColors = ['#6b7280', '#4b5563', '#3a4452', '#2a3442', '#1f2937']
 
+  if (loading) {
+    return <PageLoader />
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="p-8 max-w-7xl mx-auto">
@@ -115,8 +119,8 @@ export default function InsightsPage() {
                 <Target className="w-5 h-5 text-primary" />
               </div>
             </div>
-            {loading || !keyMetrics ? (
-              <Skeleton className="h-10 w-24" />
+            {!keyMetrics ? (
+              <div className="h-10 w-24" />
             ) : (
               <>
                 <p className="text-3xl font-bold text-foreground">
@@ -133,8 +137,8 @@ export default function InsightsPage() {
                 <Clock className="w-5 h-5 text-primary" />
               </div>
             </div>
-            {loading || !keyMetrics || keyMetrics.avg_response_hours == null ? (
-              <Skeleton className="h-10 w-24" />
+            {!keyMetrics || keyMetrics.avg_response_hours == null ? (
+              <div className="h-10 w-24" />
             ) : (
               <>
                 <p className="text-3xl font-bold text-foreground">
@@ -151,8 +155,8 @@ export default function InsightsPage() {
                 <AlertCircle className="w-5 h-5 text-primary" />
               </div>
             </div>
-            {loading || !keyMetrics ? (
-              <Skeleton className="h-10 w-24" />
+            {!keyMetrics ? (
+              <div className="h-10 w-24" />
             ) : (
               <>
                 <p className="text-3xl font-bold text-foreground">
@@ -172,8 +176,8 @@ export default function InsightsPage() {
                 <TrendingUp className="w-5 h-5 text-primary" />
               </div>
             </div>
-            {loading || !keyMetrics || keyMetrics.ai_accuracy == null ? (
-              <Skeleton className="h-10 w-24" />
+            {!keyMetrics || keyMetrics.ai_accuracy == null ? (
+              <div className="h-10 w-24" />
             ) : (
               <>
                 <p className="text-3xl font-bold text-foreground">
@@ -239,9 +243,7 @@ export default function InsightsPage() {
         {/* Category Distribution */}
         <Card className="p-8 mb-8">
           <h2 className="text-xl font-semibold mb-6">Category Distribution (last 7 days)</h2>
-          {loading ? (
-            <Skeleton className="h-64 w-full" />
-          ) : categoryData.length === 0 ? (
+          {categoryData.length === 0 ? (
             <p className="text-sm text-muted-foreground">No categorized emails yet.</p>
           ) : (
             <ResponsiveContainer width="100%" height={300}>
@@ -271,9 +273,7 @@ export default function InsightsPage() {
         {/* Importance Trend */}
         <Card className="p-8 mb-8">
           <h2 className="text-xl font-semibold mb-6">Importance Trend (last 7 days)</h2>
-          {loading ? (
-            <Skeleton className="h-64 w-full" />
-          ) : trendData.length === 0 ? (
+          {trendData.length === 0 ? (
             <p className="text-sm text-muted-foreground">No recent emails to chart yet.</p>
           ) : (
             <ResponsiveContainer width="100%" height={300}>
@@ -313,8 +313,8 @@ export default function InsightsPage() {
           {/* Response Delay */}
           <Card className="p-8 border-border/50">
             <h2 className="text-xl font-semibold mb-6 text-foreground">Response Delay Distribution</h2>
-            {loading ? (
-              <Skeleton className="h-64 w-full" />
+            {responseData.length === 0 ? (
+              <div className="h-64 w-full" />
             ) : (
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={responseData}>
@@ -341,8 +341,8 @@ export default function InsightsPage() {
           {/* AI Confidence */}
           <Card className="p-8 border-border/50">
             <h2 className="text-xl font-semibold mb-6 text-foreground">AI Confidence Score</h2>
-            {loading ? (
-              <Skeleton className="h-64 w-full" />
+            {confidenceData.length === 0 ? (
+              <div className="h-64 w-full" />
             ) : (
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={confidenceData}>
@@ -377,13 +377,7 @@ export default function InsightsPage() {
               </Button>
             </div>
             <div className="space-y-4">
-              {loading ? (
-                <>
-                  <Skeleton className="h-16" />
-                  <Skeleton className="h-16" />
-                  <Skeleton className="h-16" />
-                </>
-              ) : topSenders.length === 0 ? (
+              {topSenders.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No senders to show yet.</p>
               ) : (
                 topSenders.map((item, idx) => (
@@ -418,12 +412,8 @@ export default function InsightsPage() {
               </Button>
             </div>
             <div className="space-y-4">
-              {loading || !volumeSummary ? (
-                <>
-                  <Skeleton className="h-16" />
-                  <Skeleton className="h-16" />
-                  <Skeleton className="h-12" />
-                </>
+              {!volumeSummary ? (
+                <div className="h-16" />
               ) : (
                 <>
                   <div className="p-3 rounded-lg bg-secondary/20 border border-border/30">
@@ -474,12 +464,8 @@ export default function InsightsPage() {
             </Button>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
-            {loading || !engagementSummary ? (
-              <>
-                <Skeleton className="h-28" />
-                <Skeleton className="h-28" />
-                <Skeleton className="h-28" />
-              </>
+            {!engagementSummary ? (
+              <div className="h-28" />
             ) : (
               <>
                 <div className="space-y-3 p-4 bg-secondary/20 rounded-lg border border-border/30 hover:border-border transition">

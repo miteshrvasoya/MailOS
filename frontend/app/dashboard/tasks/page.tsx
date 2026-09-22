@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { getTasks, createTask, updateTask, Task } from '@/lib/api'
 import { useToast } from '@/components/ui/use-toast'
 import { format } from 'date-fns'
+import { PageLoader } from '@/components/ui/page-loader'
 
 import { useAuth } from '@/hooks/useAuth'
 
@@ -66,8 +67,12 @@ export default function TasksPage() {
     }
   }
 
+  if (loading) {
+    return <PageLoader />
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Tasks</h1>
       </div>
@@ -86,9 +91,7 @@ export default function TasksPage() {
       </form>
 
       <div className="space-y-2">
-        {loading ? (
-           <div className="text-center text-muted-foreground p-8">Loading tasks...</div>
-        ) : tasks.length === 0 ? (
+        {tasks.length === 0 ? (
            <div className="text-center text-muted-foreground p-8">No tasks yet. Process some emails or add one!</div>
         ) : (
           tasks.map(task => (
