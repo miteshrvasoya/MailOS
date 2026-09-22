@@ -327,84 +327,91 @@ export default function SuggestionsPage() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-8 animate-in fade-in duration-500 pb-20">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 relative z-10">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Brain className="h-8 w-8 text-primary" />
+          <h1 className="text-3xl font-bold flex items-center gap-2 tracking-tight text-foreground">
+            <div className="bg-primary/10 p-2 rounded-xl text-primary">
+              <Brain className="h-6 w-6" />
+            </div>
             AI Suggestions
           </h1>
-          <p className="text-muted-foreground mt-1">
-            Review AI label proposals grouped by category. Approve, reassign, or reject in bulk.
+          <p className="text-muted-foreground mt-2 text-sm max-w-xl leading-relaxed">
+            Review and organize AI label proposals. Use bulk actions to quickly sort your inbox, or redefine categories on the fly.
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground bg-secondary/50 px-3 py-1.5 rounded-full">
-            <Sparkles className="h-4 w-4" />
+          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground bg-secondary/50 px-3 py-2 rounded-xl border border-border/50">
+            <Sparkles className="h-4 w-4 text-accent-indigo" />
             <span>{actions.length} pending</span>
           </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground bg-secondary/50 px-3 py-1.5 rounded-full">
-            <FolderOpen className="h-4 w-4" />
+          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground bg-secondary/50 px-3 py-2 rounded-xl border border-border/50">
+            <FolderOpen className="h-4 w-4 text-accent-amber" />
             <span>{groups.length} groups</span>
           </div>
         </div>
       </div>
 
-      {/* Bulk Action Bar */}
+      {/* Floating Bulk Action Bar */}
       {selected.size > 0 && (
-        <div className="sticky top-20 z-10 bg-card/95 backdrop-blur border border-border rounded-xl px-5 py-3 flex items-center justify-between shadow-lg animate-in slide-in-from-top-2 duration-300">
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium">
-              {selected.size} of {actions.length} selected
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline" size="sm"
-              className="gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-              onClick={handleBulkReject} disabled={bulkProcessing}
-            >
-              {bulkProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
-              Reject Selected
-            </Button>
-            <Button
-              size="sm"
-              className="gap-1.5 bg-green-600 hover:bg-green-700 text-white"
-              onClick={handleBulkApprove} disabled={bulkProcessing}
-            >
-              {bulkProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCheck className="h-4 w-4" />}
-              Approve Selected
-            </Button>
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-5 duration-300">
+          <div className="glass-premium px-6 py-4 rounded-2xl shadow-2xl border border-border flex items-center justify-between gap-8 min-w-[400px]">
+            <div className="flex items-center gap-3">
+              <div className="bg-primary/20 text-primary w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm">
+                {selected.size}
+              </div>
+              <span className="text-sm font-semibold text-foreground">
+                selected of {actions.length}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline" size="sm"
+                className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200/50 rounded-xl transition-all"
+                onClick={handleBulkReject} disabled={bulkProcessing}
+              >
+                {bulkProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
+                Reject
+              </Button>
+              <Button
+                size="sm"
+                className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl transition-all shadow-md shadow-primary/20"
+                onClick={handleBulkApprove} disabled={bulkProcessing}
+              >
+                {bulkProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCheck className="h-4 w-4" />}
+                Approve All Selected
+              </Button>
+            </div>
           </div>
         </div>
       )}
 
       {/* Undo Toast Stack */}
       {undoItems.length > 0 && (
-        <div className="fixed bottom-6 right-6 z-50 space-y-2">
+        <div className="fixed bottom-28 right-6 z-50 space-y-3">
           {undoItems.map(item => (
             <div
               key={item.actionId}
-              className="bg-card border border-border rounded-lg px-4 py-3 shadow-xl flex items-center gap-3 min-w-[320px] animate-in slide-in-from-bottom-2 duration-300"
+              className="glass-premium border border-border rounded-xl px-5 py-4 shadow-xl flex items-center gap-4 min-w-[340px] animate-in slide-in-from-bottom-2 duration-300"
             >
-              <div className={`p-1.5 rounded-full ${
-                item.type === 'approve' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+              <div className={`p-2 rounded-full ${
+                item.type === 'approve' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
               }`}>
-                {item.type === 'approve' ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
+                {item.type === 'approve' ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">
+                <p className="text-sm font-semibold text-foreground">
                   {item.type === 'approve' ? 'Approved' : 'Rejected'}
                 </p>
                 <p className="text-xs text-muted-foreground truncate">{item.subject}</p>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <span className="text-xs text-muted-foreground flex items-center gap-1 tabular-nums">
-                  <Timer className="w-3 h-3" /> {item.seconds}s
+              <div className="flex items-center gap-3 flex-shrink-0">
+                <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5 tabular-nums">
+                  <Timer className="w-3.5 h-3.5" /> {item.seconds}s
                 </span>
-                <Button variant="outline" size="sm" className="h-7 px-2 gap-1 text-xs" onClick={() => handleUndo(item.actionId)}>
-                  <Undo2 className="w-3 h-3" /> Undo
+                <Button variant="outline" size="sm" className="h-8 rounded-lg px-3 gap-1.5 text-xs border-border/50 hover:bg-secondary/80" onClick={() => handleUndo(item.actionId)}>
+                  <Undo2 className="w-3.5 h-3.5" /> Undo
                 </Button>
               </div>
             </div>
@@ -414,17 +421,18 @@ export default function SuggestionsPage() {
 
       {/* Content */}
       {actions.length === 0 ? (
-        <Card className="flex flex-col items-center justify-center py-16 text-center border-dashed">
-          <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-            <Check className="h-10 w-10 text-primary" />
+        <Card className="flex flex-col items-center justify-center py-24 text-center border-dashed border-border/60 bg-secondary/20 relative overflow-hidden group">
+          <div className="absolute inset-0 noise-overlay opacity-30" />
+          <div className="h-24 w-24 rounded-full bg-primary/10 flex items-center justify-center mb-6 relative z-10 group-hover:scale-110 transition-transform duration-500">
+            <Sparkles className="h-10 w-10 text-primary" />
           </div>
-          <h2 className="text-xl font-semibold">All caught up!</h2>
-          <p className="text-muted-foreground max-w-sm mt-2">
-            AI has no pending suggestions. Check your <a href="/dashboard/settings" className="text-primary hover:underline">settings</a> to configure auto-apply.
+          <h2 className="text-2xl font-bold tracking-tight relative z-10">Inbox Zero achieved!</h2>
+          <p className="text-muted-foreground max-w-sm mt-3 relative z-10 text-sm">
+            AI has no pending suggestions right now. Want it done automatically? Check your <a href="/dashboard/settings" className="text-primary hover:underline font-medium">settings</a> to configure auto-apply.
           </p>
         </Card>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-6">
           {groups.map((group) => {
             const visibleActions = group.expanded
               ? group.actions
@@ -433,159 +441,176 @@ export default function SuggestionsPage() {
             const avgConfidence = group.actions.reduce((sum, a) => sum + a.confidence, 0) / group.actions.length
 
             return (
-              <Card key={group.label} className="overflow-hidden">
+              <Card key={group.label} className="overflow-hidden spotlight-card border-border/50 bg-card/40 backdrop-blur-sm transition-all hover:shadow-lg hover:shadow-primary/5">
                 {/* Group Header */}
-                <div className="px-5 py-4 bg-secondary/30 border-b border-border/50">
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <Checkbox
-                        checked={isGroupSelected(group)}
-                        // @ts-ignore
-                        indeterminate={isGroupPartiallySelected(group)}
-                        onCheckedChange={() => toggleSelectGroup(group)}
-                      />
+                <div className="px-4 py-3 bg-gradient-to-r from-secondary/40 to-transparent border-b border-border/40 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <Checkbox
+                      checked={isGroupSelected(group)}
+                      // @ts-ignore
+                      indeterminate={isGroupPartiallySelected(group)}
+                      onCheckedChange={() => toggleSelectGroup(group)}
+                      className="w-4 h-4 rounded-sm data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground data-[state=checked]:border-primary border-muted-foreground/30"
+                    />
 
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        {editingGroupLabel === group.label ? (
-                          <div className="flex items-center gap-2 flex-1">
-                            <select
-                              value={newGroupLabel}
-                              onChange={(e) => setNewGroupLabel(e.target.value)}
-                              className="px-2 py-1 text-sm rounded-md bg-background border border-border focus:outline-none focus:border-primary min-w-[160px]"
-                            >
-                              <option value={group.label}>{group.label} (current)</option>
-                              {allLabels.filter(l => l !== group.label).map(l => (
-                                <option key={l} value={l}>{l}</option>
-                              ))}
-                            </select>
-                            <input
-                              type="text"
-                              placeholder="Or type custom label..."
-                              value={newGroupLabel && !allLabels.includes(newGroupLabel) ? newGroupLabel : ''}
-                              onChange={(e) => setNewGroupLabel(e.target.value)}
-                              className="px-2 py-1 text-sm rounded-md bg-background border border-border focus:outline-none focus:border-primary flex-1 min-w-[140px]"
-                            />
-                            <Button
-                              size="sm" variant="default" className="h-7 text-xs"
-                              disabled={reassigning}
-                              onClick={() => handleReassignGroupLabel(group.label, newGroupLabel)}
-                            >
-                              {reassigning ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Apply'}
-                            </Button>
-                            <Button
-                              size="sm" variant="ghost" className="h-7 text-xs"
-                              onClick={() => setEditingGroupLabel(null)}
-                            >
-                              Cancel
-                            </Button>
+                    <div className="flex flex-wrap items-center gap-3 flex-1 min-w-0">
+                      {editingGroupLabel === group.label ? (
+                        <div className="flex items-center gap-2 flex-1 animate-in fade-in slide-in-from-left-2 duration-300">
+                          <select
+                            value={newGroupLabel}
+                            onChange={(e) => setNewGroupLabel(e.target.value)}
+                            className="px-2 py-1 text-xs rounded bg-background border border-border focus:outline-none focus:ring-1 focus:ring-primary/20 focus:border-primary min-w-[120px] transition-all shadow-sm"
+                          >
+                            <option value={group.label}>{group.label} (current)</option>
+                            {allLabels.filter(l => l !== group.label).map(l => (
+                              <option key={l} value={l}>{l}</option>
+                            ))}
+                          </select>
+                          <input
+                            type="text"
+                            placeholder="Or type custom label..."
+                            value={newGroupLabel && !allLabels.includes(newGroupLabel) ? newGroupLabel : ''}
+                            onChange={(e) => setNewGroupLabel(e.target.value)}
+                            className="px-2 py-1 text-xs rounded bg-background border border-border focus:outline-none focus:ring-1 focus:ring-primary/20 focus:border-primary flex-1 min-w-[120px] transition-all shadow-sm"
+                          />
+                          <Button
+                            size="sm" className="h-6 rounded px-2 bg-primary text-primary-foreground text-[10px] font-medium shadow-sm"
+                            disabled={reassigning}
+                            onClick={() => handleReassignGroupLabel(group.label, newGroupLabel)}
+                          >
+                            {reassigning ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Apply'}
+                          </Button>
+                          <Button
+                            size="sm" variant="ghost" className="h-6 rounded px-2 text-[10px] text-muted-foreground hover:bg-secondary/80"
+                            onClick={() => setEditingGroupLabel(null)}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-1.5">
+                            <Tag className="h-3.5 w-3.5 text-primary shrink-0" />
+                            <h3 className="font-semibold text-sm truncate text-foreground tracking-tight">{group.label}</h3>
                           </div>
-                        ) : (
-                          <>
-                            <Tag className="h-4 w-4 text-primary shrink-0" />
-                            <h3 className="font-semibold text-base truncate">{group.label}</h3>
-                            <Badge variant="outline" className="shrink-0 bg-primary/10 text-primary border-primary/20">
-                              <Hash className="h-3 w-3 mr-0.5" />
-                              {group.actions.length}
+                          <div className="flex items-center gap-1.5">
+                            <Badge variant="secondary" className="shrink-0 bg-primary/5 text-primary border-primary/10 px-1.5 py-0 text-[10px] font-medium leading-4">
+                              {group.actions.length} {group.actions.length === 1 ? 'email' : 'emails'}
                             </Badge>
                             <Badge
                               variant="outline"
-                              className={`shrink-0 gap-1 ${
-                                avgConfidence > 0.9 ? 'text-green-600 bg-green-50 border-green-200' :
-                                avgConfidence > 0.7 ? 'text-yellow-600 bg-yellow-50 border-yellow-200' :
-                                'text-gray-600 bg-gray-50 border-gray-200'
+                              className={`shrink-0 px-1.5 py-0 text-[10px] font-medium leading-4 ${
+                                avgConfidence > 0.9 ? 'text-accent-emerald bg-accent-emerald/5 border-accent-emerald/20' :
+                                avgConfidence > 0.7 ? 'text-accent-amber bg-accent-amber/5 border-accent-amber/20' :
+                                'text-muted-foreground bg-secondary border-border/50'
                               }`}
                             >
-                              <Brain className="h-3 w-3" />
-                              {Math.round(avgConfidence * 100)}% avg
+                              {Math.round(avgConfidence * 100)}% conf
                             </Badge>
                             <Button
                               size="sm" variant="ghost"
-                              className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-primary"
+                              className="h-5 px-1.5 rounded text-[10px] gap-1 text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
                               onClick={() => { setEditingGroupLabel(group.label); setNewGroupLabel(group.label) }}
                             >
-                              <Pencil className="h-3 w-3" /> Change Label
+                              <Pencil className="h-2.5 w-2.5" /> Edit Label
                             </Button>
-                          </>
-                        )}
-                      </div>
+                          </div>
+                        </>
+                      )}
                     </div>
+                  </div>
 
-                    {/* Group Actions */}
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Button
-                        variant="outline" size="sm"
-                        className="gap-1 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 text-xs"
-                        onClick={() => handleRejectGroup(group)}
-                        disabled={bulkProcessing}
-                      >
-                        <XCircle className="h-3.5 w-3.5" /> Reject All
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="gap-1 bg-green-600 hover:bg-green-700 text-white text-xs"
-                        onClick={() => handleApproveGroup(group)}
-                        disabled={bulkProcessing}
-                      >
-                        <CheckCheck className="h-3.5 w-3.5" /> Approve All
-                      </Button>
-                    </div>
+                  {/* Group Bulk Actions */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Button
+                      variant="ghost" size="sm"
+                      className="gap-1 text-red-500 hover:text-red-600 hover:bg-red-500/10 text-[11px] font-medium rounded px-2 h-6"
+                      onClick={() => handleRejectGroup(group)}
+                      disabled={bulkProcessing}
+                    >
+                      <XCircle className="h-3 w-3" /> Reject All
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="gap-1 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border border-primary/20 text-[11px] font-medium rounded px-2 h-6 shadow-sm transition-all"
+                      onClick={() => handleApproveGroup(group)}
+                      disabled={bulkProcessing}
+                    >
+                      <CheckCheck className="h-3 w-3" /> Approve All
+                    </Button>
                   </div>
                 </div>
 
-                {/* Email List */}
-                <div className="divide-y divide-border/50">
+                {/* Email List - Compact Gmail Style */}
+                <div className="divide-y divide-border/30">
                   {visibleActions.map((action) => (
                     <div
                       key={action.id}
-                      className={`px-5 py-3 flex items-center gap-3 transition-colors hover:bg-secondary/20 ${
-                        selected.has(action.id) ? 'bg-primary/[0.02]' : ''
+                      className={`px-4 py-1.5 flex items-center gap-3 transition-all duration-200 hover:bg-secondary/40 group/item text-sm ${
+                        selected.has(action.id) ? 'bg-primary/5 border-l-2 border-l-primary pl-[14px]' : 'border-l-2 border-l-transparent'
                       }`}
                     >
                       <Checkbox
                         checked={selected.has(action.id)}
                         onCheckedChange={() => toggleSelect(action.id)}
+                        className="w-4 h-4 rounded-sm data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground data-[state=checked]:border-primary border-muted-foreground/30 transition-all shrink-0"
                       />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{action.email_subject}</p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {action.email_sender}
-                          <span className="mx-1.5 opacity-40">•</span>
-                          {formatDistanceToNow(new Date(action.created_at))} ago
-                          {action.reason && (
-                            <>
-                              <span className="mx-1.5 opacity-40">•</span>
-                              <span className="italic">{action.reason}</span>
-                            </>
-                          )}
-                        </p>
+                      
+                      {/* Sender (approx 20%) */}
+                      <div className="w-[180px] shrink-0 font-medium text-foreground truncate text-[13px]">
+                        {action.email_sender}
                       </div>
-                      <Badge
-                        variant="outline"
-                        className={`shrink-0 gap-1 text-xs ${
-                          action.confidence > 0.9 ? 'text-green-600 bg-green-50 border-green-200' :
-                          action.confidence > 0.7 ? 'text-yellow-600 bg-yellow-50 border-yellow-200' :
-                          'text-gray-600 bg-gray-50 border-gray-200'
-                        }`}
-                      >
-                        {Math.round(action.confidence * 100)}%
-                      </Badge>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Button
-                          variant="ghost" size="sm"
-                          className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => handleReject(action)}
-                          disabled={!!processing || bulkProcessing}
+
+                      {/* Subject and Reason (flexible) */}
+                      <div className="flex-1 min-w-0 flex items-center gap-2 truncate">
+                        <span className="font-semibold text-foreground text-[13px] truncate">
+                          {action.email_subject}
+                        </span>
+                        {action.reason && (
+                          <span className="text-muted-foreground text-[13px] truncate opacity-70">
+                            - {action.reason}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Date */}
+                      <div className="w-[100px] shrink-0 text-[12px] text-muted-foreground text-right hidden md:block">
+                        {formatDistanceToNow(new Date(action.created_at), { addSuffix: true }).replace('about ', '')}
+                      </div>
+
+                      {/* Right side: Confidence & Actions */}
+                      <div className="flex items-center gap-2 shrink-0 w-[120px] justify-end relative">
+                        <Badge
+                          variant="secondary"
+                          className={`text-[10px] font-medium px-1.5 py-0 leading-4 group-hover/item:opacity-0 transition-opacity absolute right-0 ${
+                            action.confidence > 0.9 ? 'text-accent-emerald bg-accent-emerald/10' :
+                            action.confidence > 0.7 ? 'text-accent-amber bg-accent-amber/10' :
+                            'text-muted-foreground bg-secondary'
+                          }`}
                         >
-                          {processing === action.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
-                        </Button>
-                        <Button
-                          variant="ghost" size="sm"
-                          className="h-7 w-7 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
-                          onClick={() => handleApprove(action)}
-                          disabled={!!processing || bulkProcessing}
-                        >
-                          {processing === action.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                        </Button>
+                          {Math.round(action.confidence * 100)}%
+                        </Badge>
+                        <div className="flex items-center gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity absolute right-0 bg-background/50 backdrop-blur-sm rounded-md px-1">
+                          <Button
+                            variant="ghost" size="icon"
+                            className="h-6 w-6 rounded-md text-red-500 hover:text-red-600 hover:bg-red-500/10 transition-colors"
+                            onClick={() => handleReject(action)}
+                            disabled={!!processing || bulkProcessing}
+                            title="Reject"
+                          >
+                            {processing === action.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <X className="h-3 w-3" />}
+                          </Button>
+                          <Button
+                            variant="ghost" size="icon"
+                            className="h-6 w-6 rounded-md text-green-500 hover:text-green-600 hover:bg-green-500/10 transition-colors"
+                            onClick={() => handleApprove(action)}
+                            disabled={!!processing || bulkProcessing}
+                            title="Approve"
+                          >
+                            {processing === action.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -595,12 +620,12 @@ export default function SuggestionsPage() {
                 {hasMore && (
                   <button
                     onClick={() => toggleGroupExpand(group.label)}
-                    className="w-full px-5 py-2.5 text-xs text-muted-foreground hover:text-primary hover:bg-secondary/20 flex items-center justify-center gap-1.5 transition-colors border-t border-border/40"
+                    className="w-full px-4 py-2 text-[11px] font-medium text-muted-foreground hover:text-primary hover:bg-secondary/40 flex items-center justify-center gap-1.5 transition-all border-t border-border/30 group/btn"
                   >
                     {group.expanded ? (
-                      <><ChevronDown className="h-3.5 w-3.5" /> Show less</>
+                      <><ChevronDown className="h-3.5 w-3.5 transition-transform group-hover/btn:-translate-y-0.5" /> Show less</>
                     ) : (
-                      <><ChevronRight className="h-3.5 w-3.5" /> Show {group.actions.length - EMAILS_PER_GROUP} more emails</>
+                      <><ChevronRight className="h-3.5 w-3.5 transition-transform group-hover/btn:translate-x-0.5" /> Show {group.actions.length - EMAILS_PER_GROUP} more suggestions</>
                     )}
                   </button>
                 )}
