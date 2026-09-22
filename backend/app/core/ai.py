@@ -55,7 +55,11 @@ Always return valid JSON.
 Do NOT generate random or inconsistent labels.
 """
 
-def _build_single_prompt(clean_data: Dict[str, str]) -> str:
+def _build_single_prompt(clean_data: Dict[str, str], existing_labels: Optional[List[str]] = None) -> str:
+    existing_labels_block = ""
+    if existing_labels:
+        existing_labels_block = f"\nUSER'S EXISTING LABELS (Prioritize reusing these if they match):\n{json.dumps(existing_labels)}\n"
+
     return f"""Analyze this email and return structured JSON.
 
 STRICT RULES:
@@ -69,7 +73,7 @@ Choose ONE from:
 - MUST be plural
 - MUST be 2–4 words max
 - Avoid synonyms explosion
-- Similar emails MUST map to SAME subcategory
+- Similar emails MUST map to SAME subcategory{existing_labels_block}
 Examples:
 ✔ "LinkedIn Notifications"
 ✔ "Bank Transactions"
@@ -116,6 +120,7 @@ Return JSON:
 def _build_batch_prompt(
     cleaned_emails: List[Dict[str, str]],
     previous_classifications: Optional[List[Dict[str, Any]]] = None,
+    existing_labels: Optional[List[str]] = None,
 ) -> str:
     """Build batch prompt with optional previous context for consistency."""
     email_blocks = []
@@ -143,6 +148,10 @@ PREVIOUS CLASSIFICATIONS (for consistency — reuse subcategory and intent when 
 {chr(10).join(context_items)}
 """
 
+    existing_labels_block = ""
+    if existing_labels:
+        existing_labels_block = f"\nUSER'S EXISTING LABELS (Prioritize reusing these if they match):\n{json.dumps(existing_labels)}\n"
+
     return f"""Classify these {len(cleaned_emails)} emails. Return a JSON array with exactly {len(cleaned_emails)} objects.
 
 STRICT RULES:
@@ -151,7 +160,7 @@ STRICT RULES:
 
 2. SUBCATEGORY:
 - SPECIFIC but CONSISTENT pluralized group name (2-4 words)
-- Similar emails MUST map to SAME subcategory
+- Similar emails MUST map to SAME subcategory{existing_labels_block}
 - Examples: "LinkedIn Notifications", "Bank Transactions", "E-commerce Orders", "OTP Messages"
 
 3. INTENT: machine-friendly snake_case (e.g. otp_verification, connection_request, payment_confirmation)
@@ -235,6 +244,7 @@ def classify_email(
     db=None,
     user_id: Optional[uuid.UUID] = None,
     email_id: Optional[uuid.UUID] = None,
+    existing_labels: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """
     Classify email intent and importance using OpenRouter REST API.
@@ -262,7 +272,7 @@ def classify_email(
         return fast_result
 
     # ── LLM Classification ──
-    user_message = _build_single_prompt(clean_data)
+    user_message = _build_single_prompt(clean_data, existing_labels=existing_labels)
 
     messages = [
         {"role": "system", "content": SYSTEM_MESSAGE},
@@ -291,7 +301,7 @@ def classify_email(
         raw_parsed = json.loads(content)
 
         # Normalize
-        normalized = normalize_result(raw_parsed)
+        normalized = normalize_result(raw_parsed, existing_labels=existing_labels)
 
         logger.info(f"AI: Classified '{subject[:40]}' → {normalized.get('category')}/{normalized.get('subcategory')} "
                      f"(model={response_data.get('model', model)}, tokens={usage.get('total_tokens', 0)}, latency={latency_ms}ms)")
@@ -348,6 +358,7 @@ def classify_emails_batch(
     emails: list[Dict[str, str]],
     db=None,
     user_id: Optional[uuid.UUID] = None,
+    existing_labels: Optional[List[str]] = None,
 ) -> list[Dict[str, Any]]:
     """
     Classify multiple emails in a single API call.
@@ -395,6 +406,7 @@ def classify_emails_batch(
     user_message = _build_batch_prompt(
         llm_emails,
         previous_classifications=_batch_context[-5:] if _batch_context else None,
+        existing_labels=existing_labels,
     )
 
     messages = [
@@ -437,7 +449,7 @@ def classify_emails_batch(
 
         # Normalize each result
         raw_results = list(parsed)
-        normalized_results = [normalize_result(r if isinstance(r, dict) else {}) for r in parsed]
+        normalized_results = [normalize_result(r if isinstance(r, dict) else {}, existing_labels=existing_labels) for r in parsed]
 
         logger.info(f"AI: Batch classified (model={response_data.get('model', model)}, "
                      f"tokens={usage.get('total_tokens', 0)}, latency={latency_ms}ms): "
@@ -496,7 +508,7 @@ def classify_emails_batch(
             e_data = emails[idx]
             result = classify_email(
                 e_data.get("subject", ""), e_data.get("body", ""), e_data.get("sender", ""),
-                db=db, user_id=user_id,
+                db=db, user_id=user_id, existing_labels=existing_labels,
             )
             results[idx] = result
 

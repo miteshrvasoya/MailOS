@@ -175,7 +175,11 @@ def classify_stored_emails(
         })
         insight_map[idx] = insight
 
-    # 3. Call AI (with retry)
+    # 3. Fetch existing labels for consistency
+    existing_labels_query = select(EmailAction.suggested_label).where(EmailAction.user_id == user.id).distinct()
+    existing_labels = [lbl for lbl in db.exec(existing_labels_query).all() if lbl and lbl != "Uncategorized"]
+
+    # 4. Call AI (with retry)
     all_ai_results = []
     total_chunks = (len(pending_insights) + batch_size - 1) // batch_size
     
@@ -193,7 +197,7 @@ def classify_stored_emails(
         logger.info(f"EmailProcessor: Classifying chunk {chunk_num}/{total_chunks}")
         sync_manager.set_phase(user.id, "classifying", f"AI classifying chunk {chunk_num}/{total_chunks}...")
         
-        chunk_results = _classify_chunk_with_retry(chunk_inputs, db, user.id)
+        chunk_results = _classify_chunk_with_retry(chunk_inputs, db, user.id, existing_labels=existing_labels)
         all_ai_results.extend(chunk_results)
 
     classify_elapsed = time.time() - classify_start
@@ -409,6 +413,7 @@ def _classify_chunk_with_retry(
     db,
     user_id,
     max_retries: int = 1,
+    existing_labels: Optional[list] = None,
 ) -> list:
     """
     Attempt batch classification with retry.
@@ -418,7 +423,7 @@ def _classify_chunk_with_retry(
 
     for attempt in range(max_retries + 1):
         try:
-            return classify_emails_batch(batch_input, db=db, user_id=user_id)
+            return classify_emails_batch(batch_input, db=db, user_id=user_id, existing_labels=existing_labels)
         except Exception as e:
             if attempt < max_retries:
                 logger.warning(f"EmailProcessor: Batch classification attempt {attempt + 1} failed: {e}. Retrying...")
@@ -435,6 +440,7 @@ def _classify_chunk_with_retry(
                             email_input.get("sender", ""),
                             db=db,
                             user_id=user_id,
+                            existing_labels=existing_labels,
                         )
                         results.append(result)
                     except Exception as inner_e:
@@ -459,6 +465,9 @@ def process_email_pipeline(
     """
     Legacy pipeline for single email analysis (e.g. from UI testing).
     """
+    existing_labels_query = select(EmailAction.suggested_label).where(EmailAction.user_id == user.id).distinct()
+    existing_labels = [lbl for lbl in db.exec(existing_labels_query).all() if lbl and lbl != "Uncategorized"]
+
     # 1. AI Classification
     ai_result = classify_email(
         email_data.get("subject", ""), 
@@ -466,6 +475,7 @@ def process_email_pipeline(
         email_data.get("sender", ""),
         db=db,
         user_id=user.id,
+        existing_labels=existing_labels,
     )
     
     # ... (Rest of logic is similar to _apply_classification_to_insight but creates insight first)

@@ -16,3 +16,7 @@ ENV/
 # IDE
 .vscode/
 .idea/
+
+# Logs
+*@app.log
+*app.log

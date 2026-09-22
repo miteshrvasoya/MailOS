@@ -326,7 +326,7 @@ def try_fast_path(subject: str, sender: str, body: str = "") -> Optional[Dict[st
 
 # ─── Post-LLM Normalization ─────────────────────────────────────
 
-def normalize_subcategory(subcategory: str) -> str:
+def normalize_subcategory(subcategory: str, existing_labels: Optional[List[str]] = None) -> str:
     """Normalize a subcategory string to its canonical form."""
     if not subcategory:
         return "Other"
@@ -339,7 +339,17 @@ def normalize_subcategory(subcategory: str) -> str:
         return SUBCATEGORY_NORMALIZATION_MAP[lookup]
 
     # Title-case for consistency
-    return " ".join(word.capitalize() for word in cleaned.split())
+    canonical = " ".join(word.capitalize() for word in cleaned.split())
+    
+    # Fuzzy match against existing user labels
+    if existing_labels:
+        import difflib
+        matches = difflib.get_close_matches(canonical, existing_labels, n=1, cutoff=0.85)
+        if matches:
+            logger.info(f"Normalizer: Fuzzy matched '{canonical}' -> '{matches[0]}'")
+            return matches[0]
+            
+    return canonical
 
 
 def normalize_intent(intent: str) -> str:
@@ -393,7 +403,7 @@ def normalize_category(category: str) -> str:
     return "Other"
 
 
-def normalize_result(ai_result: Dict[str, Any]) -> Dict[str, Any]:
+def normalize_result(ai_result: Dict[str, Any], existing_labels: Optional[List[str]] = None) -> Dict[str, Any]:
     """
     Full post-LLM normalization pipeline.
     Takes raw AI output and returns a cleaned, consistent result.
@@ -404,7 +414,7 @@ def normalize_result(ai_result: Dict[str, Any]) -> Dict[str, Any]:
     normalized["category"] = normalize_category(ai_result.get("category", ""))
 
     # 2. Subcategory
-    normalized["subcategory"] = normalize_subcategory(ai_result.get("subcategory", ""))
+    normalized["subcategory"] = normalize_subcategory(ai_result.get("subcategory", ""), existing_labels=existing_labels)
 
     # 3. Intent
     normalized["intent"] = normalize_intent(ai_result.get("intent", ""))
