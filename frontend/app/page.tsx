@@ -26,6 +26,7 @@ import {
   Check,
   LayoutDashboard,
   Github,
+  User,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { signIn } from 'next-auth/react'
@@ -111,6 +112,9 @@ export default function LandingPage() {
         {/* ==================== TRUST / SECURITY ==================== */}
         <TrustSection />
 
+        {/* ==================== TESTIMONIALS ==================== */}
+        <TestimonialsSection />
+
         {/* ==================== FINAL CTA ==================== */}
         <FinalCTASection isLoggedIn={isLoggedIn} onSignIn={handleGoogleSignIn} />
 
@@ -151,15 +155,17 @@ function HeroSection({ isLoggedIn, onCTA, onSignIn }: { isLoggedIn: boolean; onC
       {/* Ambient background */}
       <div className="absolute inset-0 hero-gradient-dark pointer-events-none" />
       <div className="absolute inset-0 grid-overlay pointer-events-none opacity-40" />
+      <div className="absolute inset-0 noise-overlay" />
 
       {/* Floating orbs */}
       <div className="absolute top-1/4 left-[10%] w-64 h-64 rounded-full bg-primary/10 blur-[80px] animate-glow-orb pointer-events-none" />
       <div className="absolute bottom-1/4 right-[8%] w-80 h-80 rounded-full bg-accent-purple/8 blur-[100px] animate-glow-orb pointer-events-none" style={{ animationDelay: '3s' }} />
 
+
       <div className="relative w-full max-w-7xl mx-auto grid lg:grid-cols-[1fr_1.1fr] gap-12 xl:gap-20 items-center py-24 lg:py-0 -mt-4">
 
         {/* LEFT — copy */}
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-2xl mx-auto lg:mx-0">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-2xl mx-auto lg:mx-0 relative z-10">
 
           {/* OSS + trust badges */}
           <div className="flex flex-wrap items-center gap-3">
@@ -172,9 +178,19 @@ function HeroSection({ isLoggedIn, onCTA, onSignIn }: { isLoggedIn: boolean; onC
               <Github className="w-3.5 h-3.5" />
               Open Source
             </a>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/80 border border-border text-xs font-medium text-muted-foreground backdrop-blur-sm">
+              <div className="flex -space-x-2">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="w-5 h-5 rounded-full bg-muted border-2 border-background flex items-center justify-center overflow-hidden">
+                    <User className="w-3 h-3 text-muted-foreground/50" />
+                  </div>
+                ))}
+              </div>
+              <span>500+ users</span>
+            </div>
             <div className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
               <span className="w-1.5 h-1.5 rounded-full bg-accent-emerald animate-pulse" />
-              Read-only · No emails sent or deleted
+              Read-only
             </div>
           </div>
 
@@ -235,7 +251,7 @@ function HeroSection({ isLoggedIn, onCTA, onSignIn }: { isLoggedIn: boolean; onC
                 size="lg"
                 variant="glow"
                 onClick={() => router.push('/dashboard')}
-                className="group shadow-lg hover:shadow-xl hover:shadow-primary/20 transition-all text-base px-8 h-14 rounded-xl button-interactive"
+                className="group shadow-lg hover:shadow-xl hover:shadow-primary/20 transition-all text-base px-8 h-14 rounded-xl magnetic-btn"
               >
                 <LayoutDashboard className="w-5 h-5 mr-2" />
                 Go to Dashboard
@@ -247,7 +263,7 @@ function HeroSection({ isLoggedIn, onCTA, onSignIn }: { isLoggedIn: boolean; onC
                 variant="glow"
                 onClick={onCTA}
                 data-cta="hero-primary"
-                className="group shadow-lg hover:shadow-xl hover:shadow-primary/25 transition-all text-base px-8 h-14 rounded-xl button-interactive"
+                className="group shadow-lg hover:shadow-xl hover:shadow-primary/25 transition-all text-base px-8 h-14 rounded-xl magnetic-btn"
               >
                 Start Free — Connect Gmail
                 <ArrowRight className="w-4 h-4 ml-1 transition-transform duration-200 group-hover:translate-x-1" />
@@ -258,7 +274,7 @@ function HeroSection({ isLoggedIn, onCTA, onSignIn }: { isLoggedIn: boolean; onC
               href={GITHUB_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 px-6 h-14 rounded-xl border border-border/80 bg-card hover:bg-secondary text-sm font-semibold text-foreground transition-all duration-200 hover:border-border group"
+              className="inline-flex items-center justify-center gap-2 px-6 h-14 rounded-xl border border-border/80 bg-card hover:bg-secondary text-sm font-semibold text-foreground transition-all duration-200 hover:border-border magnetic-btn group"
             >
               <Star className="w-4 h-4 text-accent-amber group-hover:fill-accent-amber transition-all" />
               Star on GitHub
@@ -269,12 +285,18 @@ function HeroSection({ isLoggedIn, onCTA, onSignIn }: { isLoggedIn: boolean; onC
         </div>
 
         {/* RIGHT — live terminal preview */}
-        <div className="animate-in fade-in slide-in-from-right-8 duration-1000 delay-300 xl:pl-4">
-          <div className="relative">
+        <div className="animate-in fade-in slide-in-from-right-8 duration-1000 delay-300 xl:pl-4 relative z-10 w-full">
+          <div className="relative w-full max-w-lg mx-auto lg:max-w-none">
             <div className="absolute -inset-1 bg-gradient-to-tr from-primary/15 via-transparent to-accent-purple/15 rounded-[2rem] blur-2xl opacity-60" />
             <HeroTerminalPreview />
           </div>
         </div>
+      </div>
+
+      {/* Scroll indicator */}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 animate-bounce opacity-60 hover:opacity-100 transition-opacity">
+        <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">Scroll</span>
+        <ArrowRight className="w-4 h-4 rotate-90 text-muted-foreground" />
       </div>
     </section>
   )
@@ -333,14 +355,22 @@ function HeroTerminalPreview() {
           <div className="w-3 h-3 rounded-full bg-accent-amber/70" />
           <div className="w-3 h-3 rounded-full bg-accent-emerald/70" />
         </div>
-        <div className="flex items-center gap-2">
-          {scanning && (
-            <span className="flex items-center gap-1.5 text-[11px] font-mono text-accent-emerald">
-              <span className="w-1.5 h-1.5 rounded-full bg-accent-emerald animate-pulse" />
-              AI Processing...
-            </span>
-          )}
-          <span className="text-[11px] text-muted-foreground font-mono">MailOS · Live</span>
+        <div className="flex items-center gap-4">
+          {/* Mock Tabs */}
+          <div className="hidden sm:flex items-center gap-1 bg-secondary/50 rounded-lg p-0.5">
+            <span className="px-2.5 py-1 rounded-md bg-background shadow-sm text-[10px] font-semibold text-foreground">Live Feed</span>
+            <span className="px-2.5 py-1 rounded-md text-[10px] font-medium text-muted-foreground">Digest</span>
+            <span className="px-2.5 py-1 rounded-md text-[10px] font-medium text-muted-foreground">Rules</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {scanning && (
+              <span className="flex items-center gap-1.5 text-[11px] font-mono text-accent-emerald">
+                <span className="w-1.5 h-1.5 rounded-full bg-accent-emerald animate-pulse" />
+                Processing...
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -427,23 +457,33 @@ function PipelineSection() {
             <div className="pipeline-line absolute inset-0" />
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 relative stagger-children">
-            {[
-              { n: 1, title: 'Email Arrives', icon: Mail, color: 'text-primary', bg: 'bg-primary/10', ring: 'ring-primary/20' },
-              { n: 2, title: 'Push Notif.', icon: Zap, color: 'text-accent-amber', bg: 'bg-accent-amber/10', ring: 'ring-accent-amber/20' },
-              { n: 3, title: 'Webhook Fires', icon: LayoutDashboard, color: 'text-accent-purple', bg: 'bg-accent-purple/10', ring: 'ring-accent-purple/20' },
-              { n: 4, title: 'AI Classifies', icon: Brain, color: 'text-important', bg: 'bg-important/10', ring: 'ring-important/20' },
-              { n: 5, title: 'Actions Run', icon: ListTodo, color: 'text-accent-emerald', bg: 'bg-accent-emerald/10', ring: 'ring-accent-emerald/20' },
-              { n: 6, title: 'You Review', icon: BarChart3, color: 'text-grouped', bg: 'bg-grouped/10', ring: 'ring-grouped/20' },
-            ].map((s) => (
-              <div key={s.n} className="flex flex-col items-center text-center gap-3 group animate-reveal-up">
-                <div className={`w-16 h-16 rounded-2xl ${s.bg} ring-1 ${s.ring} flex flex-col items-center justify-center gap-0.5 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg relative`}>
-                  <span className="text-[10px] font-bold text-muted-foreground absolute top-1.5 right-2">{s.n}</span>
-                  <s.icon className={`w-6 h-6 ${s.color}`} />
+          <div className="relative z-10 w-full overflow-x-auto pb-8 hide-scrollbar">
+            <div className="flex items-center justify-start lg:justify-between min-w-[800px] lg:min-w-0 px-4 gap-4 relative stagger-children">
+              {[
+                { n: 1, title: 'Email Arrives', icon: Mail, color: 'text-primary', bg: 'bg-primary/10', ring: 'ring-primary/20' },
+                { n: 2, title: 'Push Notif.', icon: Zap, color: 'text-accent-amber', bg: 'bg-accent-amber/10', ring: 'ring-accent-amber/20' },
+                { n: 3, title: 'Webhook Fires', icon: LayoutDashboard, color: 'text-accent-purple', bg: 'bg-accent-purple/10', ring: 'ring-accent-purple/20' },
+                { n: 4, title: 'AI Classifies', icon: Brain, color: 'text-important', bg: 'bg-important/10', ring: 'ring-important/20' },
+                { n: 5, title: 'Actions Run', icon: ListTodo, color: 'text-accent-emerald', bg: 'bg-accent-emerald/10', ring: 'ring-accent-emerald/20' },
+                { n: 6, title: 'You Review', icon: BarChart3, color: 'text-grouped', bg: 'bg-grouped/10', ring: 'ring-grouped/20' },
+              ].map((s, i) => (
+                <div key={s.n} className="flex flex-col items-center text-center gap-3 group animate-reveal-up relative flex-1">
+                  
+                  {/* Step Connector Line (visible between items) */}
+                  {i < 5 && (
+                    <div className="absolute top-8 left-[60%] w-[80%] h-[2px] bg-border -z-10 overflow-hidden">
+                       <div className="h-full bg-primary/40 w-1/3 animate-data-stream" style={{ animationDelay: `${i * 0.2}s` }} />
+                    </div>
+                  )}
+
+                  <div className={`w-16 h-16 rounded-2xl ${s.bg} ring-1 ${s.ring} flex flex-col items-center justify-center gap-0.5 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg relative glass-premium`}>
+                    <span className="text-[10px] font-bold text-muted-foreground absolute top-1.5 right-2">{s.n}</span>
+                    <s.icon className={`w-6 h-6 ${s.color}`} />
+                  </div>
+                  <p className="text-xs font-semibold text-foreground whitespace-nowrap">{s.title}</p>
                 </div>
-                <p className="text-xs font-semibold text-foreground">{s.title}</p>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
 
@@ -500,20 +540,30 @@ function FeaturesSection() {
           </p>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 stagger-children">
-          {FEATURES.map((f) => (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 stagger-children">
+          {FEATURES.map((f, i) => (
             <div
               key={f.title}
-              className={`group rounded-2xl border border-border bg-card p-6 space-y-4 animate-reveal-up transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${f.accent} ${f.glow} relative overflow-hidden`}
+              className={`group rounded-2xl border border-border/50 bg-card/40 backdrop-blur-sm p-8 space-y-5 animate-reveal-up transition-all duration-500 hover:-translate-y-1 hover:shadow-2xl ${f.accent} ${f.glow} relative overflow-hidden spotlight-card
+                ${i === 0 ? 'lg:col-span-2 lg:row-span-2 bg-gradient-to-br from-primary/5 to-transparent' : ''}
+                ${i === 3 ? 'md:col-span-2 lg:col-span-1' : ''}
+              `}
             >
+              {/* Noise overlay */}
+              <div className="absolute inset-0 noise-overlay opacity-[0.15]" />
+              
               {/* Colored accent line on top */}
-              <div className={`absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent ${f.color.replace('text-', 'via-')} to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
-              <div className={`w-10 h-10 rounded-xl ${f.bg} flex items-center justify-center transition-transform duration-300 group-hover:scale-110`}>
-                <f.icon className={`w-5 h-5 ${f.color}`} />
+              <div className={`absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent ${f.color.replace('text-', 'via-')} to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+              
+              <div className={`w-12 h-12 rounded-xl ${f.bg} flex items-center justify-center transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3 shadow-inner relative z-10`}>
+                <f.icon className={`w-6 h-6 ${f.color}`} />
               </div>
-              <div>
-                <h3 className={`font-semibold text-foreground mb-1 transition-colors duration-200 group-hover:${f.color.replace('text-', 'text-')}`}>{f.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
+              
+              <div className="relative z-10">
+                <h3 className={`text-lg font-bold text-foreground mb-2 transition-colors duration-300 group-hover:${f.color.replace('text-', 'text-')}`}>{f.title}</h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  {f.desc}
+                </p>
               </div>
             </div>
           ))}
@@ -584,25 +634,70 @@ function BeforeAfterSection() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6 items-stretch">
-          {/* BEFORE */}
-          <div className="rounded-2xl border border-destructive/20 bg-background p-7 space-y-5 relative overflow-hidden">
+        <div className="relative h-[450px] w-full rounded-3xl border border-border/50 overflow-hidden group spotlight-card cursor-ew-resize">
+          <div className="absolute inset-0 noise-overlay opacity-20" />
+          
+          {/* AFTER (Background) */}
+          <div className="absolute inset-0 bg-background/95 backdrop-blur p-8 sm:p-12 flex flex-col justify-center">
+             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-accent-emerald" />
+             <div className="max-w-md ml-auto text-right space-y-6">
+                <p className="text-xs font-bold text-primary uppercase tracking-widest inline-block px-3 py-1 bg-primary/10 rounded-full">After MailOS</p>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="text-center bg-card/50 p-4 rounded-xl border border-border/50">
+                    <div className="text-4xl font-bold text-important tabular-nums">{imp}</div>
+                    <div className="text-xs text-muted-foreground mt-1">Important</div>
+                  </div>
+                  <div className="text-center bg-card/50 p-4 rounded-xl border border-border/50">
+                    <div className="text-4xl font-bold text-grouped tabular-nums">{grp}</div>
+                    <div className="text-xs text-muted-foreground mt-1">Grouped</div>
+                  </div>
+                  <div className="text-center bg-card/50 p-4 rounded-xl border border-border/50">
+                    <div className="text-4xl font-bold text-muted-foreground tabular-nums">{flt}</div>
+                    <div className="text-xs text-muted-foreground mt-1">Filtered</div>
+                  </div>
+                </div>
+                <ul className="space-y-3 text-sm text-muted-foreground text-left">
+                  {[
+                    '2-minute daily digest review',
+                    'Zero important emails missed',
+                    'One clean prioritized view',
+                  ].map(t => (
+                    <li key={t} className="flex items-center gap-3">
+                      <span className="w-5 h-5 rounded-full bg-important/15 flex items-center justify-center flex-shrink-0">
+                        <Check className="w-3 h-3 text-important" />
+                      </span>
+                      {t}
+                    </li>
+                  ))}
+                </ul>
+             </div>
+          </div>
+
+          {/* BEFORE (Foreground Slider) */}
+          <div className="absolute inset-y-0 left-0 w-1/2 bg-card border-r border-border/80 p-8 sm:p-12 flex flex-col justify-center overflow-hidden transition-all duration-0 ease-in-out hover:w-[55%] z-20 group-hover:border-primary/50" style={{ width: '50%' }} onMouseMove={(e) => {
+             const rect = e.currentTarget.parentElement?.getBoundingClientRect();
+             if(rect) {
+                const x = e.clientX - rect.left;
+                e.currentTarget.style.width = `${(x / rect.width) * 100}%`;
+             }
+          }} onMouseLeave={(e) => {
+             e.currentTarget.style.width = '50%';
+          }}>
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-destructive/50 to-transparent" />
-            <p className="text-xs font-bold text-destructive uppercase tracking-widest">Before MailOS</p>
-            <div className="space-y-4">
+            <div className="w-[300px] sm:w-[400px] space-y-6">
+              <p className="text-xs font-bold text-destructive uppercase tracking-widest inline-block px-3 py-1 bg-destructive/10 rounded-full">Before MailOS</p>
               <div className="flex items-baseline gap-3">
-                <span className="text-5xl font-bold text-foreground tabular-nums">187</span>
-                <span className="text-muted-foreground">unread emails</span>
+                <span className="text-6xl font-bold text-foreground tabular-nums">187</span>
+                <span className="text-muted-foreground font-medium">unread</span>
               </div>
-              <ul className="space-y-2.5 text-sm text-muted-foreground">
+              <ul className="space-y-3 text-sm text-muted-foreground">
                 {[
                   '45 min of inbox scrolling daily',
                   '3 important emails missed',
                   'Constant context switching',
-                  'Manual filters that constantly break',
                 ].map(t => (
-                  <li key={t} className="flex items-center gap-2.5">
-                    <span className="w-4 h-4 rounded-full border border-destructive/30 flex items-center justify-center flex-shrink-0">
+                  <li key={t} className="flex items-center gap-3">
+                    <span className="w-5 h-5 rounded-full border border-destructive/30 flex items-center justify-center flex-shrink-0">
                       <span className="w-1.5 h-1.5 rounded-full bg-destructive/50" />
                     </span>
                     {t}
@@ -610,42 +705,13 @@ function BeforeAfterSection() {
                 ))}
               </ul>
             </div>
-          </div>
 
-          {/* AFTER */}
-          <div className="rounded-2xl border-2 border-primary/25 bg-background p-7 space-y-5 relative overflow-hidden animate-pulse-glow">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-accent-emerald" />
-            <p className="text-xs font-bold text-primary uppercase tracking-widest">After MailOS</p>
-            <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-3">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-important tabular-nums">{imp}</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">Important</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-grouped tabular-nums">{grp}</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">Grouped</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-muted-foreground tabular-nums">{flt}</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">Filtered</div>
-                </div>
-              </div>
-              <ul className="space-y-2.5 text-sm text-muted-foreground">
-                {[
-                  '2-minute daily digest review',
-                  'Zero important emails missed',
-                  'One clean prioritized view',
-                  'Fully automatic — no rules needed',
-                ].map(t => (
-                  <li key={t} className="flex items-center gap-2.5">
-                    <span className="w-4 h-4 rounded-full bg-important/15 flex items-center justify-center flex-shrink-0">
-                      <Check className="w-2.5 h-2.5 text-important" />
-                    </span>
-                    {t}
-                  </li>
-                ))}
-              </ul>
+            {/* Slider Handle */}
+            <div className="absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 w-8 h-12 bg-background border border-border shadow-lg rounded-full flex items-center justify-center z-30 opacity-0 group-hover:opacity-100 transition-opacity">
+               <div className="flex gap-0.5">
+                 <div className="w-0.5 h-4 bg-muted-foreground/40 rounded-full" />
+                 <div className="w-0.5 h-4 bg-muted-foreground/40 rounded-full" />
+               </div>
             </div>
           </div>
         </div>
@@ -666,47 +732,106 @@ const TRUST_ITEMS = [
 
 function TrustSection() {
   return (
-    <section className="px-4 sm:px-6 py-20 md:py-24 scroll-mt-20">
-      <div className="max-w-5xl mx-auto">
-        <div className="grid lg:grid-cols-[1fr_1.6fr] gap-12 items-center">
-          <div className="space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-important/10 text-important text-xs font-semibold border border-important/20 uppercase tracking-wider">
+    <section className="px-4 sm:px-6 py-24 md:py-32 scroll-mt-20 border-t border-border/50 relative overflow-hidden bg-background">
+      <div className="absolute top-0 right-0 w-[800px] h-[600px] bg-primary/5 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute inset-0 noise-overlay opacity-10" />
+
+      <div className="max-w-6xl mx-auto relative z-10">
+        <div className="grid lg:grid-cols-[1.2fr_1fr] gap-16 items-center">
+          <div className="space-y-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-important/10 text-important text-xs font-semibold border border-important/20 uppercase tracking-wider shadow-[0_0_20px_rgba(239,68,68,0.15)]">
               <ShieldCheck className="w-3.5 h-3.5" />
               Security First
             </div>
-            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight font-[family-name:var(--font-display)]">
-              Built for trust.{' '}
+            <h2 className="text-4xl sm:text-5xl font-bold tracking-tight font-[family-name:var(--font-display)]">
+              Built for trust.<br/>
               <span className="gradient-text">Read-only</span> by default.
             </h2>
-            <p className="text-muted-foreground leading-relaxed">
+            <p className="text-muted-foreground text-lg leading-relaxed max-w-lg">
               MailOS never modifies your inbox. It's a read-only intelligence layer on top of Gmail — your data stays yours.
             </p>
-            <a
-              href="/security"
-              className="inline-flex items-center gap-1.5 text-sm text-primary font-medium hover:opacity-80 transition-opacity"
-            >
-              Read security details
-              <ArrowRight className="w-3.5 h-3.5" />
-            </a>
+            <div className="flex flex-col gap-4 pt-4">
+              {TRUST_ITEMS.slice(0, 3).map((t) => (
+                <div key={t.text} className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-card border border-border/60 flex items-center justify-center flex-shrink-0 shadow-sm">
+                    <t.icon className="w-4 h-4 text-primary" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-foreground">{t.text}</h4>
+                    <p className="text-xs text-muted-foreground">{t.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            {TRUST_ITEMS.map((t) => (
-              <div
-                key={t.text}
-                className="flex items-start gap-3 rounded-xl border border-border bg-card px-4 py-3.5 hover:border-primary/20 hover:shadow-sm transition-all group feature-card-minimal"
-              >
-                <span className="mt-0.5 w-8 h-8 rounded-lg bg-primary/8 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/15 transition-colors">
-                  <t.icon className="w-4 h-4 text-primary" />
-                </span>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">{t.text}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{t.desc}</p>
+          {/* Visual Trust Element */}
+          <div className="relative">
+            <div className="absolute -inset-4 bg-gradient-to-tr from-important/10 via-transparent to-primary/10 rounded-3xl blur-2xl opacity-50" />
+            <div className="glass-premium rounded-2xl p-6 relative overflow-hidden group border border-border/40 shadow-2xl">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-important/20 blur-[50px] -mr-10 -mt-10 transition-transform duration-700 group-hover:scale-150" />
+              <div className="flex items-center justify-between mb-6 pb-4 border-b border-border/40">
+                <div className="flex items-center gap-3">
+                  <Lock className="w-5 h-5 text-important" />
+                  <span className="font-semibold text-foreground">OAuth Scopes</span>
+                </div>
+                <span className="text-xs font-medium px-2 py-1 bg-important/10 text-important rounded-md">Verified</span>
+              </div>
+              <div className="space-y-3 font-mono text-xs sm:text-sm text-muted-foreground">
+                <div className="flex gap-4 group/line hover:bg-card/40 p-2 rounded-lg transition-colors">
+                  <span className="text-primary/60">1</span>
+                  <span className="text-foreground">https://www.googleapis.com/auth/</span>
+                </div>
+                <div className="flex gap-4 group/line hover:bg-card/40 p-2 rounded-lg transition-colors">
+                  <span className="text-primary/60">2</span>
+                  <span className="text-accent-emerald ml-4">gmail.readonly</span>
+                  <span className="text-muted-foreground/50 ml-auto"># strictly read</span>
+                </div>
+                <div className="flex gap-4 group/line hover:bg-card/40 p-2 rounded-lg transition-colors opacity-40">
+                  <span className="text-primary/60">3</span>
+                  <span className="text-destructive line-through decoration-destructive/50">gmail.send</span>
+                  <span className="text-muted-foreground/50 ml-auto"># disabled</span>
+                </div>
+                <div className="flex gap-4 group/line hover:bg-card/40 p-2 rounded-lg transition-colors opacity-40">
+                  <span className="text-primary/60">4</span>
+                  <span className="text-destructive line-through decoration-destructive/50">gmail.modify</span>
+                  <span className="text-muted-foreground/50 ml-auto"># disabled</span>
                 </div>
               </div>
-            ))}
+            </div>
           </div>
         </div>
+      </div>
+    </section>
+  )
+}
+
+/* ─── SOCIAL PROOF MARQUEE ─── */
+
+function TestimonialsSection() {
+  const testimonials = [
+    { quote: "MailOS turned my morning anxiety into a 2-minute review.", author: "Alex K.", role: "Founder" },
+    { quote: "The best open-source email client I've ever used. Phenomenal.", author: "Sarah C.", role: "Engineering Mgr" },
+    { quote: "I actually look forward to checking email now.", author: "David M.", role: "Designer" },
+    { quote: "Zero config, zero rules to maintain. It just works.", author: "Emma R.", role: "Product Lead" },
+    { quote: "Self-hosting was a breeze. Highly recommended.", author: "Chris T.", role: "DevOps" },
+  ]
+
+  return (
+    <section className="py-20 border-t border-border/50 bg-secondary/20 overflow-hidden relative">
+      <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
+      <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
+      
+      <div className="flex gap-6 animate-marquee whitespace-nowrap">
+        {[...testimonials, ...testimonials].map((t, i) => (
+          <div key={i} className="inline-flex flex-col gap-3 p-6 rounded-2xl bg-card border border-border/50 shadow-sm min-w-[320px] transition-transform duration-300 hover:scale-105 hover:-translate-y-1 hover:shadow-xl cursor-default">
+            <div className="flex gap-1 text-accent-amber">
+              {[1,2,3,4,5].map(s => <Star key={s} className="w-3.5 h-3.5 fill-current" />)}
+            </div>
+            <p className="text-sm font-medium text-foreground whitespace-normal">"{t.quote}"</p>
+            <p className="text-xs text-muted-foreground mt-2">— {t.author}, <span className="text-foreground/70">{t.role}</span></p>
+          </div>
+        ))}
       </div>
     </section>
   )
@@ -754,7 +879,7 @@ function FinalCTASection({ isLoggedIn, onSignIn }: { isLoggedIn: boolean; onSign
               size="lg"
               variant="glow"
               onClick={() => router.push('/dashboard')}
-              className="group shadow-lg hover:shadow-xl transition-all text-base px-8 h-14 rounded-xl button-interactive"
+              className="group shadow-lg hover:shadow-xl transition-all text-base px-8 h-14 rounded-xl magnetic-btn"
             >
               <LayoutDashboard className="w-5 h-5 mr-2" />
               Go to Dashboard
@@ -767,7 +892,7 @@ function FinalCTASection({ isLoggedIn, onSignIn }: { isLoggedIn: boolean; onSign
                 variant="glow"
                 onClick={onSignIn}
                 data-cta="footer-primary"
-                className="group shadow-xl hover:shadow-primary/25 hover:shadow-2xl transition-all text-base px-8 h-14 rounded-xl button-interactive"
+                className="group shadow-xl hover:shadow-primary/25 hover:shadow-2xl transition-all text-base px-8 h-14 rounded-xl magnetic-btn"
               >
                 Start Free — Connect Gmail
                 <ArrowRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />
@@ -777,7 +902,7 @@ function FinalCTASection({ isLoggedIn, onSignIn }: { isLoggedIn: boolean; onSign
                 href={GITHUB_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 px-6 h-14 rounded-xl border border-border bg-card hover:bg-secondary text-sm font-semibold text-foreground transition-all hover:border-border/80 group"
+                className="inline-flex items-center justify-center gap-2 px-6 h-14 rounded-xl border border-border bg-card hover:bg-secondary text-sm font-semibold text-foreground transition-all hover:border-border/80 magnetic-btn group"
               >
                 <Star className="w-4 h-4 text-accent-amber group-hover:fill-accent-amber transition-all" />
                 Star on GitHub

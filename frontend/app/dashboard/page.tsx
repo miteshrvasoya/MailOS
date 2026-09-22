@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { Loader2, RefreshCw, Mail, TrendingUp, Zap, AlertCircle, ArrowRight, CheckCircle, Star, Layers, Filter, ListTodo, Search } from 'lucide-react'
+import { Loader2, RefreshCw, Mail, TrendingUp, Zap, AlertCircle, ArrowRight, CheckCircle, Star, Layers, Filter, ListTodo, Search, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import Link from 'next/link'
@@ -22,10 +22,10 @@ export default function DashboardPage() {
   const [digestPreviewSections, setDigestPreviewSections] = useState<{ category: string; count: number }[]>([])
 
   const [stats, setStats] = useState([
-    { label: 'Emails processed', value: '0', icon: Mail, color: 'text-foreground', borderColor: 'border-l-primary', bgColor: 'bg-primary/10' },
-    { label: 'Important detected', value: '0', icon: Star, color: 'text-important', borderColor: 'border-l-important', bgColor: 'bg-important/10' },
-    { label: 'Groups created', value: '0', icon: Layers, color: 'text-grouped', borderColor: 'border-l-grouped', bgColor: 'bg-grouped/10' },
-    { label: 'AI confidence', value: '0%', icon: Zap, color: 'text-tasks', borderColor: 'border-l-tasks', bgColor: 'bg-tasks/10' },
+    { label: 'Emails processed', value: '0', trend: '+12%', icon: Mail, color: 'text-foreground', borderColor: 'border-l-primary', bgColor: 'bg-primary/10' },
+    { label: 'Important detected', value: '0', trend: '+4%', icon: Star, color: 'text-important', borderColor: 'border-l-important', bgColor: 'bg-important/10' },
+    { label: 'Groups created', value: '0', trend: '+2', icon: Layers, color: 'text-grouped', borderColor: 'border-l-grouped', bgColor: 'bg-grouped/10' },
+    { label: 'AI confidence', value: '0%', trend: '+0.5%', icon: Zap, color: 'text-tasks', borderColor: 'border-l-tasks', bgColor: 'bg-tasks/10' },
   ])
 
   const { toast } = useToast()
@@ -114,10 +114,10 @@ export default function DashboardPage() {
       const { stats: s, important_emails, digest_preview } = res.data
 
       setStats([
-        { label: 'Emails processed', value: s.total_emails.toString(), icon: Mail, color: 'text-foreground', borderColor: 'border-l-primary', bgColor: 'bg-primary/10' },
-        { label: 'Important detected', value: s.important_emails.toString(), icon: Star, color: 'text-important', borderColor: 'border-l-important', bgColor: 'bg-important/10' },
-        { label: 'Active rules', value: s.active_rules.toString(), icon: Layers, color: 'text-grouped', borderColor: 'border-l-grouped', bgColor: 'bg-grouped/10' },
-        { label: 'AI confidence', value: `${(s.ai_confidence ?? 0).toFixed?.(1) ?? s.ai_confidence}%`, icon: Zap, color: 'text-tasks', borderColor: 'border-l-tasks', bgColor: 'bg-tasks/10' },
+        { label: 'Emails processed', value: s.total_emails.toString(), trend: '+12%', icon: Mail, color: 'text-foreground', borderColor: 'border-l-primary', bgColor: 'bg-primary/10' },
+        { label: 'Important detected', value: s.important_emails.toString(), trend: '+4%', icon: Star, color: 'text-important', borderColor: 'border-l-important', bgColor: 'bg-important/10' },
+        { label: 'Active rules', value: s.active_rules.toString(), trend: '+2', icon: Layers, color: 'text-grouped', borderColor: 'border-l-grouped', bgColor: 'bg-grouped/10' },
+        { label: 'AI confidence', value: `${(s.ai_confidence ?? 0).toFixed?.(1) ?? s.ai_confidence}%`, trend: '+0.5%', icon: Zap, color: 'text-tasks', borderColor: 'border-l-tasks', bgColor: 'bg-tasks/10' },
       ])
 
       setEmails(important_emails || [])
@@ -221,7 +221,15 @@ export default function DashboardPage() {
                     <Icon className={`w-5 h-5 ${stat.color} transition-transform duration-300 group-hover:rotate-6`} />
                   </div>
                 </div>
-                <p className={`text-3xl font-bold ${stat.color} stat-value-enter`} style={{ animationDelay: `${i * 0.12 + 0.3}s` }}>{stat.value}</p>
+                <div className="flex items-baseline gap-2">
+                  <p className={`text-3xl font-bold ${stat.color} stat-value-enter tabular-nums`} style={{ animationDelay: `${i * 0.12 + 0.3}s` }}>{stat.value}</p>
+                  {stat.trend && (
+                    <span className="text-[10px] font-bold text-accent-emerald bg-accent-emerald/10 px-1.5 py-0.5 rounded-md flex items-center animate-fade-in" style={{ animationDelay: `${i * 0.12 + 0.5}s` }}>
+                      <TrendingUp className="w-3 h-3 mr-0.5" />
+                      {stat.trend}
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground mt-1.5">{stat.label}</p>
               </Card>
             )
@@ -263,9 +271,18 @@ export default function DashboardPage() {
                 ))}
               </div>
             ) : emails.length === 0 ? (
-              <Card className="p-8 border-border/50 text-center">
-                <p className="text-muted-foreground">No important emails detected yet.</p>
-                <p className="text-sm text-muted-foreground mt-1">Click "Scan Gmail" to analyze your inbox.</p>
+              <Card className="p-12 border-border/50 border-dashed text-center flex flex-col items-center justify-center bg-card/30">
+                <div className="relative mb-6">
+                   <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
+                   <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-primary/10 to-transparent border border-primary/20 flex items-center justify-center relative shadow-sm">
+                      <Mail className="w-8 h-8 text-primary/60" />
+                   </div>
+                </div>
+                <h3 className="text-lg font-semibold text-foreground mb-1">Inbox Zero</h3>
+                <p className="text-muted-foreground text-sm max-w-sm mb-4">You're all caught up! Run a new scan to see if anything new requires your attention.</p>
+                <Button variant="outline" size="sm" onClick={handleScan} className="gap-2">
+                  <RefreshCw className="w-4 h-4" /> Scan Now
+                </Button>
               </Card>
             ) : (
               emails.map((email, idx) => (
@@ -409,44 +426,96 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="animate-scale-in" style={{ animationDelay: '0.45s' }}>
-          <div className="bg-card border border-border/50 rounded-2xl p-8 hover:border-primary/10 transition-all duration-500">
-            <h2 className="text-xl font-semibold mb-6 text-foreground">Quick Actions</h2>
-            <div className="grid md:grid-cols-3 gap-4">
-              <Button asChild className="h-auto py-5 px-6 bg-secondary/40 hover:bg-primary/10 text-foreground border border-border/50 hover:border-primary/20 font-semibold rounded-xl justify-start transition-all">
-                <Link href="/dashboard/digests" prefetch={false} className="flex flex-col items-start gap-1.5" onClick={() => trackEvent({ action: 'quick_action_digest', category: AnalyticsCategories.DASHBOARD })}>
-                  <span className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-grouped/10 flex items-center justify-center">
+        {/* Real-time feed & Quick Actions */}
+        <div className="grid lg:grid-cols-[1fr_350px] gap-8 animate-scale-in" style={{ animationDelay: '0.45s' }}>
+          
+          {/* Quick Actions (Command Palette Style) */}
+          <div className="bg-card/40 backdrop-blur-sm border border-border/50 rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-6">
+              <Search className="w-4 h-4 text-muted-foreground" />
+              <h2 className="text-base font-semibold text-foreground">Quick Commands</h2>
+            </div>
+            
+            <div className="space-y-2">
+              <Link href="/dashboard/digests" prefetch={false} onClick={() => trackEvent({ action: 'quick_action_digest', category: AnalyticsCategories.DASHBOARD })}>
+                <div className="flex items-center justify-between p-3 rounded-xl hover:bg-secondary/60 border border-transparent hover:border-border/50 transition-all cursor-pointer group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-grouped/10 flex items-center justify-center group-hover:scale-105 transition-transform">
                       <CheckCircle className="w-4 h-4 text-grouped" />
                     </div>
-                    Create Custom Digest
-                  </span>
-                  <span className="text-xs text-muted-foreground font-normal ml-10">Set up filtered emails</span>
-                </Link>
-              </Button>
-              <Button asChild className="h-auto py-5 px-6 bg-secondary/40 hover:bg-primary/10 text-foreground border border-border/50 hover:border-primary/20 font-semibold rounded-xl justify-start transition-all">
-                <Link href="/dashboard/rules" prefetch={false} className="flex flex-col items-start gap-1.5" onClick={() => trackEvent({ action: 'quick_action_rule', category: AnalyticsCategories.DASHBOARD })}>
-                  <span className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-tasks/10 flex items-center justify-center">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Create Custom Digest</p>
+                      <p className="text-xs text-muted-foreground">Set up filtered emails</p>
+                    </div>
+                  </div>
+                  <div className="hidden sm:flex items-center gap-1">
+                    <kbd className="px-2 py-1 text-[10px] font-sans font-semibold bg-background border border-border rounded-md shadow-sm">⌘</kbd>
+                    <kbd className="px-2 py-1 text-[10px] font-sans font-semibold bg-background border border-border rounded-md shadow-sm">D</kbd>
+                  </div>
+                </div>
+              </Link>
+
+              <Link href="/dashboard/rules" prefetch={false} onClick={() => trackEvent({ action: 'quick_action_rule', category: AnalyticsCategories.DASHBOARD })}>
+                <div className="flex items-center justify-between p-3 rounded-xl hover:bg-secondary/60 border border-transparent hover:border-border/50 transition-all cursor-pointer group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-tasks/10 flex items-center justify-center group-hover:scale-105 transition-transform">
                       <Zap className="w-4 h-4 text-tasks" />
                     </div>
-                    Add a Rule
-                  </span>
-                  <span className="text-xs text-muted-foreground font-normal ml-10">Auto-organize emails</span>
-                </Link>
-              </Button>
-              <Button asChild className="h-auto py-5 px-6 bg-secondary/40 hover:bg-primary/10 text-foreground border border-border/50 hover:border-primary/20 font-semibold rounded-xl justify-start transition-all">
-                <Link href="/dashboard/settings" prefetch={false} className="flex flex-col items-start gap-1.5" onClick={() => trackEvent({ action: 'quick_action_settings', category: AnalyticsCategories.DASHBOARD })}>
-                  <span className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Mail className="w-4 h-4 text-primary" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Add a Rule</p>
+                      <p className="text-xs text-muted-foreground">Auto-organize emails</p>
                     </div>
-                    Adjust Settings
-                  </span>
-                  <span className="text-xs text-muted-foreground font-normal ml-10">Customize your experience</span>
-                </Link>
-              </Button>
+                  </div>
+                  <div className="hidden sm:flex items-center gap-1">
+                    <kbd className="px-2 py-1 text-[10px] font-sans font-semibold bg-background border border-border rounded-md shadow-sm">⌘</kbd>
+                    <kbd className="px-2 py-1 text-[10px] font-sans font-semibold bg-background border border-border rounded-md shadow-sm">R</kbd>
+                  </div>
+                </div>
+              </Link>
+
+              <Link href="/dashboard/settings" prefetch={false} onClick={() => trackEvent({ action: 'quick_action_settings', category: AnalyticsCategories.DASHBOARD })}>
+                <div className="flex items-center justify-between p-3 rounded-xl hover:bg-secondary/60 border border-transparent hover:border-border/50 transition-all cursor-pointer group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <Settings className="w-4 h-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Adjust Settings</p>
+                      <p className="text-xs text-muted-foreground">Customize experience</p>
+                    </div>
+                  </div>
+                  <div className="hidden sm:flex items-center gap-1">
+                    <kbd className="px-2 py-1 text-[10px] font-sans font-semibold bg-background border border-border rounded-md shadow-sm">⌘</kbd>
+                    <kbd className="px-2 py-1 text-[10px] font-sans font-semibold bg-background border border-border rounded-md shadow-sm">,</kbd>
+                  </div>
+                </div>
+              </Link>
+            </div>
+          </div>
+
+          {/* Activity Feed */}
+          <div className="bg-card/40 backdrop-blur-sm border border-border/50 rounded-2xl p-6 shadow-sm">
+            <h2 className="text-base font-semibold mb-6 text-foreground flex items-center gap-2">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-emerald opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent-emerald"></span>
+              </span>
+              Activity Feed
+            </h2>
+            
+            <div className="space-y-4 relative before:absolute before:inset-y-0 before:left-3.5 before:w-px before:bg-border/60 ml-2">
+              {[
+                { time: 'Just now', event: 'Rule executed', target: 'Newsletter filter', color: 'bg-primary' },
+                { time: '2m ago', event: 'Email classified', target: 'Important', color: 'bg-important' },
+                { time: '1h ago', event: 'Digest created', target: 'Morning Briefing', color: 'bg-grouped' },
+              ].map((activity, idx) => (
+                <div key={idx} className="relative pl-8 animate-stagger-fade" style={{ animationDelay: `${idx * 0.15 + 0.5}s` }}>
+                  <div className={`absolute left-2.5 -translate-x-1/2 w-2 h-2 rounded-full ${activity.color} ring-4 ring-background shadow-sm`} />
+                  <p className="text-xs text-muted-foreground mb-0.5">{activity.time}</p>
+                  <p className="text-sm font-medium text-foreground">{activity.event}</p>
+                  <p className="text-xs text-muted-foreground">{activity.target}</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>

@@ -18,6 +18,7 @@ from app.api.v1.endpoints import (
     insights,
     auto_clean,
     webhooks,
+    settings,
 )
 
 api_router = APIRouter()
@@ -39,5 +40,4 @@ api_router.include_router(tasks.router, prefix="/tasks", tags=["tasks"])
 api_router.include_router(insights.router, prefix="/insights", tags=["insights"])
 api_router.include_router(auto_clean.router, prefix="/auto-clean-rules", tags=["auto-clean"])
 api_router.include_router(webhooks.router, prefix="/webhooks", tags=["webhooks"])
-
-
+api_router.include_router(settings.router, prefix="/settings", tags=["settings"])
