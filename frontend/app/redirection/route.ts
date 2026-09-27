@@ -5,7 +5,7 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
 
   // The base URL for the local destination
-  const destinationUrl = new URL('http://localhost:3001/api/oauth/instagram/callback');
+  const destinationUrl = new URL('https://evolvr-2-0-web.vercel.app/api/oauth/instagram/callback');
 
   // Append each existing query parameter exactly as-is to the destination
   searchParams.forEach((value, key) => {
